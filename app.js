@@ -149,7 +149,6 @@ class ChineseReader {
                 this.stopPlayback();
             });
 
-            this.showStatus(`📖 Playing: ${sentence.text}`);
         } catch (error) {
             console.error('Error:', error);
             this.stopPlayback();
