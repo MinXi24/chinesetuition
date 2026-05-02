@@ -239,6 +239,118 @@
             font-weight: bold;
             margin: 10px 0;
         }
+
+        /* Mobile responsiveness */
+        @media (max-width: 768px) {
+            .header h1 {
+                font-size: 1.8rem;
+            }
+
+            .container {
+                padding: 20px;
+                border-radius: 20px;
+            }
+
+            .controls {
+                gap: 8px;
+            }
+
+            button {
+                padding: 10px 16px;
+                font-size: 0.9rem;
+            }
+
+            .text-area {
+                font-size: 1.1rem;
+                line-height: 1.8;
+                padding: 15px;
+                min-height: 150px;
+            }
+
+            .text-char {
+                padding: 3px 4px;
+                margin: 1px;
+                font-size: 1rem;
+            }
+
+            .info-panel {
+                padding: 12px 15px;
+                font-size: 0.85rem;
+            }
+
+            .info-panel p {
+                margin: 3px 0;
+                font-size: 0.8rem;
+            }
+
+            .header p {
+                font-size: 0.85rem;
+            }
+
+            .footer {
+                font-size: 0.8rem;
+            }
+        }
+
+        @media (max-width: 480px) {
+            body {
+                padding: 10px;
+            }
+
+            .header h1 {
+                font-size: 1.5rem;
+                margin-bottom: 5px;
+            }
+
+            .container {
+                padding: 15px;
+                border-radius: 15px;
+            }
+
+            .controls {
+                flex-direction: column;
+                gap: 8px;
+            }
+
+            button {
+                width: 100%;
+                padding: 12px;
+                font-size: 0.9rem;
+            }
+
+            .text-area {
+                font-size: 1rem;
+                line-height: 1.6;
+                padding: 12px;
+                min-height: 120px;
+            }
+
+            .text-char {
+                padding: 2px 3px;
+                margin: 1px 0.5px;
+                font-size: 0.95rem;
+            }
+
+            .info-panel {
+                padding: 10px 12px;
+                font-size: 0.75rem;
+                margin-bottom: 15px;
+            }
+
+            .info-panel p {
+                margin: 2px 0;
+                font-size: 0.75rem;
+            }
+
+            .header p {
+                font-size: 0.75rem;
+            }
+
+            .footer {
+                font-size: 0.7rem;
+                margin-top: 20px;
+            }
+        }
     </style>
 </head>
 <body>
