@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🌟 中文阅读助手 Chinese Reading Helper</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Comic Sans MS', 'Trebuchet MS', cursive, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+            overflow-x: hidden;
+        }
+
+        /* Floating decorations */
+        .floating-star {
+            position: fixed;
+            font-size: 2rem;
+            opacity: 0.3;
+            animation: float 3s ease-in-out infinite;
+            pointer-events: none;
+            z-index: -1;
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0) rotate(0deg); }
+            50% { transform: translateY(-20px) rotate(10deg); }
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 30px;
+            padding: 40px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            background: linear-gradient(45deg, #ff6b9d, #feca57, #48dbfb, #ff9ff3);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            color: #666;
+            font-size: 1rem;
+        }
+
+        /* Control buttons */
+        .controls {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 30px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        button {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 25px;
+            font-size: 1rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+            font-family: 'Comic Sans MS', cursive;
+        }
+
+        .btn-full {
+            background: linear-gradient(45deg, #ff6b9d, #ff8fab);
+            color: white;
+        }
+
+        .btn-full:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 20px rgba(255, 107, 157, 0.4);
+        }
+
+        .btn-full.playing {
+            background: linear-gradient(45deg, #ff5583, #ff4757);
+            animation: pulse 1s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+        }
+
+        .btn-sentence {
+            background: linear-gradient(45deg, #feca57, #ff9ff3);
+            color: white;
+        }
+
+        .btn-sentence:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 20px rgba(254, 202, 87, 0.4);
+        }
+
+        .btn-clear {
+            background: #dfe6e9;
+            color: #333;
+        }
+
+        .btn-clear:hover {
+            background: #b2bec3;
+        }
+
+        /* Text display area */
+        .text-area {
+            margin-bottom: 20px;
+            min-height: 200px;
+            padding: 20px;
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            border-radius: 20px;
+            line-height: 2;
+            font-size: 1.3rem;
+            text-align: center;
+        }
+
+        .text-char {
+            display: inline-block;
+            padding: 4px 6px;
+            margin: 2px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            position: relative;
+        }
+
+        .text-char:hover {
+            background: rgba(255, 215, 0, 0.3);
+            transform: scale(1.1);
+        }
+
+        .text-char.highlight {
+            background: linear-gradient(45deg, #ffd700, #ffed4e);
+            color: #333;
+            font-weight: bold;
+            box-shadow: 0 0 15px rgba(255, 215, 0, 0.6);
+            animation: highlight-pulse 0.4s ease;
+        }
+
+        @keyframes highlight-pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.15); }
+            100% { transform: scale(1); }
+        }
+
+        .text-char.word-button {
+            background: rgba(72, 219, 251, 0.2);
+            color: #0984e3;
+            font-weight: 600;
+        }
+
+        .text-char.word-button:hover {
+            background: rgba(72, 219, 251, 0.5);
+            transform: scale(1.15);
+        }
+
+        .text-char.sentence-char {
+            cursor: pointer;
+        }
+
+        .text-char.sentence-char:hover {
+            background: rgba(255, 193, 7, 0.2);
+        }
+
+        .text-char.sentence-highlight {
+            background: linear-gradient(45deg, #ffc107, #ffed4e);
+            color: #333;
+            font-weight: bold;
+            box-shadow: 0 0 15px rgba(255, 193, 7, 0.6);
+            animation: highlight-pulse 0.4s ease;
+        }
+
+        /* Info panel */
+        .info-panel {
+            background: linear-gradient(135deg, #e0f7fa 0%, #b2dfdb 100%);
+            padding: 15px 20px;
+            border-radius: 15px;
+            margin-bottom: 20px;
+            border-left: 5px solid #00acc1;
+        }
+
+        .info-panel strong {
+            color: #00695c;
+        }
+
+        .info-panel p {
+            color: #00897b;
+            margin: 5px 0;
+            font-size: 0.95rem;
+        }
+
+        /* Footer */
+        .footer {
+            text-align: center;
+            margin-top: 30px;
+            color: #999;
+            font-size: 0.9rem;
+        }
+
+        /* Loading indicator */
+        .spinner {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            border-top-color: white;
+            animation: spin 1s ease-in-out infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .status {
+            text-align: center;
+            height: 30px;
+            color: #667eea;
+            font-weight: bold;
+            margin: 10px 0;
+        }
+    </style>
+</head>
+<body>
+    <!-- Floating decorations -->
+    <div class="floating-star" style="top: 10%; left: 5%;">⭐</div>
+    <div class="floating-star" style="top: 20%; right: 10%;">🌟</div>
+    <div class="floating-star" style="top: 60%; left: 15%;">✨</div>
+    <div class="floating-star" style="top: 70%; right: 5%;">💫</div>
+
+    <div class="container">
+        <div class="header">
+            <h1>🌈 中文阅读助手 📚</h1>
+            <p>Chinese Reading Helper - 点击按钮或文字来学习发音</p>
+        </div>
+
+        <div class="controls">
+            <button class="btn-full" id="btnReadFull">🔊 Read Full (整句读)</button>
+            <button class="btn-clear" id="btnReset">🔄 Reset</button>
+        </div>
+
+        <div class="status" id="status"></div>
+
+        <div class="info-panel">
+            <strong>📝 How to use:</strong>
+            <p>🔊 Click "<strong>Read Full</strong>" to play the entire passage with word highlighting</p>
+            <p>👆 Click on a <span style="background: rgba(255, 200, 87, 0.5); padding: 2px 6px; border-radius: 5px;"><strong>sentence</strong></span> to hear it and see it highlighted</p>
+            <p>🔹 Click <span style="background: rgba(72, 219, 251, 0.5); padding: 2px 6px; border-radius: 5px;"><strong>blue words</strong></span> to hear individual words</p>
+        </div>
+
+        <div class="text-area" id="textArea"></div>
+
+        <div class="footer">
+            <p>🎓 Made with ❤️ 陈老师华文补习</p>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
