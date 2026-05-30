@@ -93,6 +93,28 @@ class CloudStore {
     return true;
   }
 
+  static async pullUsersOnly() {
+    if (!(await this.ensureReady())) {
+      return false;
+    }
+
+    const { collection, getDocs } = window.firebaseHelpers;
+    const fs = window.firestore;
+    const usersSnap = await getDocs(collection(fs, 'users'));
+
+    if (usersSnap.empty) {
+      return false;
+    }
+
+    const users = usersSnap.docs.map(item => {
+      const data = item.data();
+      return Object.assign({}, data, { id: data.id || item.id });
+    });
+
+    localStorage.setItem('users', JSON.stringify(users));
+    return true;
+  }
+
   static async pushAll() {
     if (!(await this.ensureReady())) {
       return false;
@@ -243,34 +265,19 @@ class Auth {
       }
 
       await window.firebaseInit();
-      const { collection, getDocs, query, where, limit } = window.firebaseHelpers;
-      const fs = window.firestore;
-      if (fs) {
-        const nextUsername = String(username).trim();
-        const nextPassword = String(password);
-        const loginQuery = query(
-          collection(fs, 'users'),
-          where('username', '==', nextUsername),
-          limit(10)
-        );
-        const loginSnap = await getDocs(loginQuery);
-        if (!loginSnap.empty) {
-          const matchingDoc = loginSnap.docs.find(docSnap => {
-            const data = docSnap.data();
-            return String(data.password) === nextPassword;
-          });
-
-          if (matchingDoc) {
-            const userData = matchingDoc.data();
-            const user = Object.assign({}, userData, { id: userData.id || matchingDoc.id });
-            localStorage.setItem('currentUser', JSON.stringify(user));
-            await window.CloudStore.pullAll();
-            return { success: true, user };
-          }
-        }
-
-        return { success: false, error: 'Invalid username or password' };
+      const usersLoaded = await window.CloudStore.pullUsersOnly();
+      if (!usersLoaded) {
+        return { success: false, error: 'No users found in Firebase.' };
       }
+
+      const result = this.login(username, password);
+      if (result.success) {
+        // Keep login fast; hydrate wallets/progress in background.
+        void window.CloudStore.pullAll().catch(error => console.error('Background cloud pull failed', error));
+        return result;
+      }
+
+      return result;
     } catch (error) {
       console.error('Cloud login sync failed', error);
       return {
