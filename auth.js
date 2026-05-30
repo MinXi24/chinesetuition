@@ -54,7 +54,10 @@ class CloudStore {
       return false;
     }
 
-    const users = usersSnap.docs.map(item => item.data());
+    const users = usersSnap.docs.map(item => {
+      const data = item.data();
+      return Object.assign({}, data, { id: data.id || item.id });
+    });
     const wallets = {};
     walletsSnap.docs.forEach(item => {
       wallets[item.id] = item.data();
@@ -232,7 +235,8 @@ class Auth {
           );
           const loginSnap = await getDocs(loginQuery);
           if (!loginSnap.empty) {
-            const user = loginSnap.docs[0].data();
+            const userData = loginSnap.docs[0].data();
+            const user = Object.assign({}, userData, { id: userData.id || loginSnap.docs[0].id });
             if (user.password !== password) {
               return { success: false, error: 'Invalid username or password' };
             }
