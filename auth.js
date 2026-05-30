@@ -1,8 +1,20 @@
 // Authentication & User Management with localStorage
 
 class CloudStore {
+  static async waitForFirebaseApi(timeoutMs = 5000) {
+    const startedAt = Date.now();
+    while (Date.now() - startedAt < timeoutMs) {
+      if (window.firebaseInit && window.firebaseHelpers) {
+        return true;
+      }
+      await new Promise(resolve => setTimeout(resolve, 100));
+    }
+    return false;
+  }
+
   static async ensureReady() {
-    if (!window.firebaseInit || !window.firebaseHelpers) {
+    const apiReady = await this.waitForFirebaseApi();
+    if (!apiReady) {
       return false;
     }
 
@@ -211,8 +223,10 @@ class Auth {
   }
 
   static login(username, password) {
+    const nextUsername = String(username).trim();
+    const nextPassword = String(password);
     const users = JSON.parse(localStorage.getItem('users') || '[]');
-    const user = users.find(u => u.username === username && u.password === password);
+    const user = users.find(u => String(u.username) === nextUsername && String(u.password) === nextPassword);
 
     if (user) {
       localStorage.setItem('currentUser', JSON.stringify(user));
@@ -223,21 +237,23 @@ class Auth {
 
   static async loginAsync(username, password) {
     try {
-      if (window.firebaseInit && window.firebaseHelpers) {
+      if (await CloudStore.waitForFirebaseApi()) {
         await window.firebaseInit();
         const { collection, getDocs, query, where, limit } = window.firebaseHelpers;
         const fs = window.firestore;
         if (fs) {
+          const nextUsername = String(username).trim();
+          const nextPassword = String(password);
           const loginQuery = query(
             collection(fs, 'users'),
-            where('username', '==', username),
+            where('username', '==', nextUsername),
             limit(1)
           );
           const loginSnap = await getDocs(loginQuery);
           if (!loginSnap.empty) {
             const userData = loginSnap.docs[0].data();
             const user = Object.assign({}, userData, { id: userData.id || loginSnap.docs[0].id });
-            if (user.password !== password) {
+            if (String(user.password) !== nextPassword) {
               return { success: false, error: 'Invalid username or password' };
             }
             localStorage.setItem('currentUser', JSON.stringify(user));
