@@ -228,12 +228,14 @@ class Auth {
           const loginQuery = query(
             collection(fs, 'users'),
             where('username', '==', username),
-            where('password', '==', password),
             limit(1)
           );
           const loginSnap = await getDocs(loginQuery);
           if (!loginSnap.empty) {
             const user = loginSnap.docs[0].data();
+            if (user.password !== password) {
+              return { success: false, error: 'Invalid username or password' };
+            }
             localStorage.setItem('currentUser', JSON.stringify(user));
             await window.CloudStore.pullAll();
             return { success: true, user };
