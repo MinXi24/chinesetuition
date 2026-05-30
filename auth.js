@@ -237,38 +237,39 @@ class Auth {
 
   static async loginAsync(username, password) {
     try {
-      if (await CloudStore.waitForFirebaseApi()) {
-        await window.firebaseInit();
-        const { collection, getDocs, query, where, limit } = window.firebaseHelpers;
-        const fs = window.firestore;
-        if (fs) {
-          const nextUsername = String(username).trim();
-          const nextPassword = String(password);
-          const loginQuery = query(
-            collection(fs, 'users'),
-            where('username', '==', nextUsername),
-            limit(10)
-          );
-          const loginSnap = await getDocs(loginQuery);
-          if (!loginSnap.empty) {
-            const matchingDoc = loginSnap.docs.find(docSnap => {
-              const data = docSnap.data();
-              return String(data.password) === nextPassword;
-            });
+      const apiReady = await CloudStore.waitForFirebaseApi();
+      if (!apiReady) {
+        return { success: false, error: 'Firebase is still loading. Please refresh and try again.' };
+      }
 
-            if (matchingDoc) {
-              const userData = matchingDoc.data();
-              const user = Object.assign({}, userData, { id: userData.id || matchingDoc.id });
-              localStorage.setItem('currentUser', JSON.stringify(user));
-              await window.CloudStore.pullAll();
-              return { success: true, user };
-            }
+      await window.firebaseInit();
+      const { collection, getDocs, query, where, limit } = window.firebaseHelpers;
+      const fs = window.firestore;
+      if (fs) {
+        const nextUsername = String(username).trim();
+        const nextPassword = String(password);
+        const loginQuery = query(
+          collection(fs, 'users'),
+          where('username', '==', nextUsername),
+          limit(10)
+        );
+        const loginSnap = await getDocs(loginQuery);
+        if (!loginSnap.empty) {
+          const matchingDoc = loginSnap.docs.find(docSnap => {
+            const data = docSnap.data();
+            return String(data.password) === nextPassword;
+          });
 
-            return { success: false, error: 'Invalid username or password' };
+          if (matchingDoc) {
+            const userData = matchingDoc.data();
+            const user = Object.assign({}, userData, { id: userData.id || matchingDoc.id });
+            localStorage.setItem('currentUser', JSON.stringify(user));
+            await window.CloudStore.pullAll();
+            return { success: true, user };
           }
         }
 
-        await window.CloudStore.pullAll();
+        return { success: false, error: 'Invalid username or password' };
       }
     } catch (error) {
       console.error('Cloud login sync failed', error);
@@ -278,7 +279,7 @@ class Auth {
       };
     }
 
-    return this.login(username, password);
+    return { success: false, error: 'Firebase login failed' };
   }
 
   static getCurrentUser() {

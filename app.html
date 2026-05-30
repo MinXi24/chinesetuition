@@ -793,14 +793,6 @@
     };
 
     async function init() {
-        if (window.CloudStore && typeof window.CloudStore.bootstrap === 'function') {
-            try {
-                await window.CloudStore.bootstrap();
-            } catch (error) {
-                console.error('Cloud bootstrap failed', error);
-            }
-        }
-
         const userJSON = localStorage.getItem('currentUser');
         currentUser = userJSON ? JSON.parse(userJSON) : null;
 
@@ -923,13 +915,6 @@
         e.preventDefault();
         const username = document.getElementById('username').value;
         const password = document.getElementById('password').value;
-        if (window.CloudStore && typeof window.CloudStore.bootstrap === 'function') {
-            try {
-                await window.CloudStore.bootstrap();
-            } catch (error) {
-                console.error('Login bootstrap failed', error);
-            }
-        }
         const result = await Auth.loginAsync(username, password);
 
         if (result.success) {
