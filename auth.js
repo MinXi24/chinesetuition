@@ -128,6 +128,51 @@ class Auth {
     return { success: false, error: 'Student not found' };
   }
 
+  static updateStudent(studentId, updates) {
+    const users = JSON.parse(localStorage.getItem('users') || '[]');
+    const user = users.find(u => u.id === studentId && u.role === 'student');
+
+    if (!user) {
+      return { success: false, error: 'Student not found' };
+    }
+
+    const nextName = (updates.name || '').trim();
+    const nextUsername = (updates.username || '').trim();
+    const nextPassword = (updates.password || '').trim();
+    const nextLevel = (updates.level || '').trim();
+
+    if (!nextName) {
+      return { success: false, error: 'Name is required' };
+    }
+
+    if (!nextUsername) {
+      return { success: false, error: 'Username is required' };
+    }
+
+    const usernameExists = users.some(existingUser => existingUser.username === nextUsername && existingUser.id !== studentId);
+    if (usernameExists) {
+      return { success: false, error: 'Username already exists' };
+    }
+
+    user.name = nextName;
+    user.username = nextUsername;
+    if (nextPassword) {
+      user.password = nextPassword;
+    }
+    if (nextLevel) {
+      user.level = nextLevel;
+    }
+
+    localStorage.setItem('users', JSON.stringify(users));
+
+    const currentUser = Auth.getCurrentUser();
+    if (currentUser && currentUser.id === studentId) {
+      localStorage.setItem('currentUser', JSON.stringify(user));
+    }
+
+    return { success: true, user };
+  }
+
   static deleteStudent(studentId) {
     const users = JSON.parse(localStorage.getItem('users') || '[]');
     const userIndex = users.findIndex(u => u.id === studentId && u.role === 'student');

@@ -159,6 +159,8 @@
         .table-actions { display: flex; gap: 8px; flex-wrap: wrap; }
         .btn-ghost { background: white; color: #FF69B4; border: 2px solid #FF69B4; }
         .btn-ghost:hover { opacity: 0.92; }
+        .btn-edit { background: white; color: #d97706; border: 2px solid #f59e0b; }
+        .btn-edit:hover { opacity: 0.92; }
         .flashcard-inner { position: relative; width: 100%; aspect-ratio: 1; transition: transform 0.6s; transform-style: preserve-3d; }
         .flashcard-inner.flipped { transform: rotateY(180deg); }
         .flashcard-front, .flashcard-back { position: absolute; width: 100%; height: 100%; backface-visibility: hidden; display: flex; flex-direction: column; justify-content: center; align-items: center; border-radius: 15px; padding: 30px; }
@@ -508,6 +510,39 @@
     </div>
 </div>
 
+<!-- EDIT STUDENT MODAL -->
+<div id="editStudentModal" class="modal">
+    <div class="modal-content">
+        <span class="close-btn" onclick="closeEditStudentModal()">&times;</span>
+        <h3>✏️ Edit Student</h3>
+        <p style="color: var(--text-light); margin: 15px 0;">Update the student's account details below.</p>
+        <div class="form-group">
+            <label>Full Name</label>
+            <input type="text" id="editStudentName">
+        </div>
+        <div class="form-group">
+            <label>Username</label>
+            <input type="text" id="editStudentUsername">
+        </div>
+        <div class="form-group">
+            <label>New Password</label>
+            <input type="password" id="editStudentPassword" placeholder="Leave blank to keep current password">
+        </div>
+        <div class="form-group">
+            <label>Level</label>
+            <select id="editStudentLevel">
+                <option value="P1">P1</option><option value="P2">P2</option><option value="P3">P3</option>
+                <option value="P4">P4</option><option value="P5">P5</option><option value="P6">P6</option>
+            </select>
+        </div>
+        <div style="display:flex; gap:10px; flex-wrap:wrap; margin-top: 20px;">
+            <button class="btn" onclick="saveEditedStudent()">💾 Save</button>
+            <button class="btn btn-ghost" onclick="closeEditStudentModal()">Cancel</button>
+        </div>
+        <div id="editStudentMessage" style="margin-top:15px;"></div>
+    </div>
+</div>
+
 <!-- STUDENT HISTORY MODAL -->
 <div id="studentHistoryModal" class="modal">
     <div class="modal-content" style="max-width: 820px; max-height: 85vh; overflow-y: auto;">
@@ -537,6 +572,7 @@
     let currentPracticeReward = null;
     let practiceSummaryMidnightTimer = null;
     let selectedStudentHistoryId = null;
+    let selectedEditStudentId = null;
 
     const passages = [
         {
@@ -991,6 +1027,7 @@
                 <td>${stats.averageQuizScore}%</td>
                 <td>
                     <div class="table-actions">
+                        <button class="btn btn-small btn-edit" onclick="openEditStudentModal('${s.id}')">✏️ Edit</button>
                         <button class="btn btn-small btn-ghost" onclick="deleteStudentAccount('${s.id}', '${s.name}')">🗑️ Delete</button>
                     </div>
                 </td>
@@ -1063,6 +1100,46 @@
         selectedStudentHistoryId = null;
     }
 
+    function openEditStudentModal(studentId) {
+        const students = Auth.getStudents();
+        const student = students.find(item => item.id === studentId);
+        if (!student) return;
+
+        selectedEditStudentId = studentId;
+        document.getElementById('editStudentName').value = student.name || '';
+        document.getElementById('editStudentUsername').value = student.username || '';
+        document.getElementById('editStudentPassword').value = '';
+        document.getElementById('editStudentLevel').value = student.level || 'P5';
+        document.getElementById('editStudentMessage').innerHTML = '';
+        document.getElementById('editStudentModal').classList.add('show');
+    }
+
+    function closeEditStudentModal() {
+        document.getElementById('editStudentModal').classList.remove('show');
+        selectedEditStudentId = null;
+    }
+
+    function saveEditedStudent() {
+        if (!selectedEditStudentId) return;
+
+        const name = document.getElementById('editStudentName').value;
+        const username = document.getElementById('editStudentUsername').value;
+        const password = document.getElementById('editStudentPassword').value;
+        const level = document.getElementById('editStudentLevel').value;
+
+        const result = Auth.updateStudent(selectedEditStudentId, { name, username, password, level });
+        if (result.success) {
+            document.getElementById('editStudentMessage').innerHTML = '✅ Student updated!';
+            updateTeacherStudentsList();
+            updateTeacherWalletList();
+            setTimeout(() => {
+                closeEditStudentModal();
+            }, 700);
+        } else {
+            document.getElementById('editStudentMessage').innerHTML = '❌ ' + result.error;
+        }
+    }
+
     function updateTeacherWalletList() {
         const students = Auth.getStudents();
         const walletTbody = document.getElementById('walletStudentsTable');
@@ -1074,7 +1151,12 @@
                 <td><strong>${s.name}</strong></td>
                 <td><span class="badge ${badge}">${s.level}</span></td>
                 <td style="font-weight:bold;color:#FF69B4;font-size:1.1rem;">${balance} pts</td>
-                <td><button class="btn btn-small" onclick="openWithdrawModal('${s.id}', '${s.name}')">💸 Withdraw</button></td>
+                <td>
+                    <div class="table-actions">
+                        <button class="btn btn-small btn-edit" onclick="openEditStudentModal('${s.id}')">✏️ Edit</button>
+                        <button class="btn btn-small" onclick="openWithdrawModal('${s.id}', '${s.name}')">💸 Withdraw</button>
+                    </div>
+                </td>
             </tr>`;
         });
     }
@@ -1403,11 +1485,17 @@
             const stats = Progress.getStudentStats(s.id);
             const badge = 'badge-' + s.level.toLowerCase();
             tbody.innerHTML += `<tr>
-                <td>${s.name}</td>
+                <td><button class="student-name-link" onclick="openStudentHistory('${s.id}')">${s.name}</button></td>
                 <td><span class="badge ${badge}">${s.level}</span></td>
                 <td><strong>${balance}</strong></td>
                 <td>${stats.totalQuizzes}</td>
                 <td>${stats.averageQuizScore}%</td>
+                <td>
+                    <div class="table-actions">
+                        <button class="btn btn-small btn-edit" onclick="openEditStudentModal('${s.id}')">✏️ Edit</button>
+                        <button class="btn btn-small btn-ghost" onclick="deleteStudentAccount('${s.id}', '${s.name}')">🗑️ Delete</button>
+                    </div>
+                </td>
             </tr>`;
         });
 
