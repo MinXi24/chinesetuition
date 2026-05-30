@@ -16,9 +16,9 @@ class Auth {
         {
           id: 'teacher001',
           username: 'teacher',
-          password: 'teacher123',
+          password: '91191967',
           role: 'teacher',
-          name: 'Miss Chen',
+          name: 'Chen Lao Shi',
           level: 'all'
         }
       ];
