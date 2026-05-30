@@ -303,7 +303,7 @@ class Progress {
       practiceKind,
       title,
       level,
-      points: 4,
+      points: 1,
       claimed: false,
       date: new Date().toISOString()
     };
@@ -329,7 +329,7 @@ class Progress {
     record.claimed = true;
     record.claimedAt = new Date().toISOString();
     localStorage.setItem('progress', JSON.stringify(progress));
-    return { success: true, points: record.points || 4, record };
+    return { success: true, points: record.points || 1, record };
   }
 
   static getStudentProgress(userId) {
@@ -402,7 +402,7 @@ class Progress {
               activityType: record.practiceKind === 'passage' ? 'Passage Practice' : 'Spelling Practice',
               title: record.title,
               level: record.level,
-              points: record.points || 4,
+              points: record.points || 1,
               claimed: !!record.claimed,
               date: record.date
             });
