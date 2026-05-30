@@ -4,7 +4,7 @@ class CloudStore {
   static async waitForFirebaseApi(timeoutMs = 5000) {
     const startedAt = Date.now();
     while (Date.now() - startedAt < timeoutMs) {
-      if (window.firebaseInit && window.firebaseHelpers) {
+      if (window.firebaseInit) {
         return true;
       }
       await new Promise(resolve => setTimeout(resolve, 100));
