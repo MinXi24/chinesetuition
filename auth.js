@@ -219,28 +219,38 @@ class Auth {
   }
 
   static async loginAsync(username, password) {
-    let result = this.login(username, password);
-    if (result.success) {
-      return result;
-    }
-
-    if (window.CloudStore && typeof window.CloudStore.pullAll === 'function') {
-      try {
-        await window.CloudStore.pullAll();
-        result = this.login(username, password);
-        if (result.success) {
-          return result;
+    try {
+      if (window.firebaseInit && window.firebaseHelpers) {
+        await window.firebaseInit();
+        const { collection, getDocs, query, where, limit } = window.firebaseHelpers;
+        const fs = window.firestore;
+        if (fs) {
+          const loginQuery = query(
+            collection(fs, 'users'),
+            where('username', '==', username),
+            where('password', '==', password),
+            limit(1)
+          );
+          const loginSnap = await getDocs(loginQuery);
+          if (!loginSnap.empty) {
+            const user = loginSnap.docs[0].data();
+            localStorage.setItem('currentUser', JSON.stringify(user));
+            await window.CloudStore.pullAll();
+            return { success: true, user };
+          }
         }
-      } catch (error) {
-        console.error('Cloud login sync failed', error);
-        return {
-          success: false,
-          error: 'Unable to load Firebase data. Check Firestore rules and network access.'
-        };
+
+        await window.CloudStore.pullAll();
       }
+    } catch (error) {
+      console.error('Cloud login sync failed', error);
+      return {
+        success: false,
+        error: 'Unable to load Firebase data. Check Firestore rules and network access.'
+      };
     }
 
-    return result;
+    return this.login(username, password);
   }
 
   static getCurrentUser() {
