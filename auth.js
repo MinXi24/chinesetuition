@@ -2,27 +2,54 @@
 
 class Auth {
   static init() {
-    // Initialize default admin if no users exist
-    if (!localStorage.getItem('users')) {
-      const defaultUsers = [
-        {
-          id: 'admin001',
-          username: 'admin',
-          password: 'admin123',
-          role: 'admin',
-          name: 'Admin User',
-          level: 'all'
-        },
-        {
-          id: 'teacher001',
-          username: 'teacher',
-          password: '91191967',
-          role: 'teacher',
-          name: 'Chen Lao Shi',
-          level: 'all'
-        }
-      ];
+    const defaultUsers = [
+      {
+        id: 'admin001',
+        username: 'admin',
+        password: 'admin123',
+        role: 'admin',
+        name: 'Admin User',
+        level: 'all'
+      },
+      {
+        id: 'teacher001',
+        username: 'teacher',
+        password: '91191967',
+        role: 'teacher',
+        name: 'Chen Lao Shi',
+        level: 'all'
+      }
+    ];
+
+    const storedUsers = JSON.parse(localStorage.getItem('users') || '[]');
+    if (storedUsers.length === 0) {
       localStorage.setItem('users', JSON.stringify(defaultUsers));
+    } else {
+      let usersChanged = false;
+      defaultUsers.forEach(defaultUser => {
+        const existingUser = storedUsers.find(user => user.username === defaultUser.username);
+        if (existingUser) {
+          if (
+            existingUser.password !== defaultUser.password ||
+            existingUser.name !== defaultUser.name ||
+            existingUser.role !== defaultUser.role ||
+            existingUser.level !== defaultUser.level
+          ) {
+            existingUser.password = defaultUser.password;
+            existingUser.name = defaultUser.name;
+            existingUser.role = defaultUser.role;
+            existingUser.level = defaultUser.level;
+            usersChanged = true;
+          }
+        } else {
+          storedUsers.push(defaultUser);
+          usersChanged = true;
+        }
+      });
+
+      if (usersChanged) {
+        localStorage.setItem('users', JSON.stringify(storedUsers));
+      }
     }
 
     // Initialize student wallets if not exist
