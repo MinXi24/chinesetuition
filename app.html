@@ -923,7 +923,7 @@
         e.preventDefault();
         const username = document.getElementById('username').value;
         const password = document.getElementById('password').value;
-        const result = Auth.login(username, password);
+        const result = await Auth.loginAsync(username, password);
 
         if (result.success) {
             currentUser = result.user;

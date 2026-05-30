@@ -218,6 +218,27 @@ class Auth {
     return { success: false, error: 'Invalid username or password' };
   }
 
+  static async loginAsync(username, password) {
+    let result = this.login(username, password);
+    if (result.success) {
+      return result;
+    }
+
+    if (window.CloudStore && typeof window.CloudStore.pullAll === 'function') {
+      try {
+        await window.CloudStore.pullAll();
+        result = this.login(username, password);
+        if (result.success) {
+          return result;
+        }
+      } catch (error) {
+        console.error('Cloud login sync failed', error);
+      }
+    }
+
+    return result;
+  }
+
   static getCurrentUser() {
     const user = localStorage.getItem('currentUser');
     return user ? JSON.parse(user) : null;
