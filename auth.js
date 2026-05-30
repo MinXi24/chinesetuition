@@ -233,6 +233,10 @@ class Auth {
         }
       } catch (error) {
         console.error('Cloud login sync failed', error);
+        return {
+          success: false,
+          error: 'Unable to load Firebase data. Check Firestore rules and network access.'
+        };
       }
     }
 

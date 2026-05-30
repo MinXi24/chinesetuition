@@ -929,7 +929,7 @@
             currentUser = result.user;
             await init();
         } else {
-            showMsg('loginMessage', '❌ Invalid credentials', 'error');
+            showMsg('loginMessage', '❌ ' + (result.error || 'Invalid credentials'), 'error');
         }
     }
 
