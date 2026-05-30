@@ -1,6 +1,6 @@
 // Lightweight Firebase helper for client-side migration
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/9.22.2/firebase-app.js';
-import { getFirestore, doc, setDoc } from 'https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore.js';
+import { getFirestore, doc, setDoc, deleteDoc, collection, getDocs } from 'https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore.js';
 
 async function firebaseInit() {
   if (window.__FIREBASE_INIT_DONE) return;
@@ -13,6 +13,13 @@ async function firebaseInit() {
     const fs = getFirestore(app);
     window.firebaseApp = app;
     window.firestore = fs;
+    window.firebaseHelpers = {
+      collection,
+      doc,
+      getDocs,
+      setDoc,
+      deleteDoc
+    };
     window.__FIREBASE_INIT_DONE = true;
     console.log('Firebase initialized');
   } catch (e) {

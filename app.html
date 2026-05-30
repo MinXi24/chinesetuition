@@ -792,7 +792,15 @@
         ]
     };
 
-    function init() {
+    async function init() {
+        if (window.CloudStore && typeof window.CloudStore.bootstrap === 'function') {
+            try {
+                await window.CloudStore.bootstrap();
+            } catch (error) {
+                console.error('Cloud bootstrap failed', error);
+            }
+        }
+
         const userJSON = localStorage.getItem('currentUser');
         currentUser = userJSON ? JSON.parse(userJSON) : null;
 
@@ -911,7 +919,7 @@
         // Removed - no longer using tabs in new layout
     }
 
-    function handleLogin(e) {
+    async function handleLogin(e) {
         e.preventDefault();
         const username = document.getElementById('username').value;
         const password = document.getElementById('password').value;
@@ -919,7 +927,7 @@
 
         if (result.success) {
             currentUser = result.user;
-            init();
+            await init();
         } else {
             showMsg('loginMessage', '❌ Invalid credentials', 'error');
         }
@@ -1923,7 +1931,9 @@
         }
     });
 
-    init();
+    document.addEventListener('DOMContentLoaded', () => {
+        void init();
+    });
 </script>
 
 </body>

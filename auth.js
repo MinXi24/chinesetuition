@@ -1,5 +1,149 @@
 // Authentication & User Management with localStorage
 
+class CloudStore {
+  static async ensureReady() {
+    if (!window.firebaseInit || !window.firebaseHelpers) {
+      return false;
+    }
+
+    await window.firebaseInit();
+    return !!window.firestore;
+  }
+
+  static normalizeProgress(progress) {
+    let changed = false;
+
+    Object.entries(progress).forEach(([userId, records]) => {
+      records.forEach(record => {
+        if (!record.id) {
+          record.id = `${record.type || 'record'}_${userId}_${record.date || Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+          changed = true;
+        }
+      });
+    });
+
+    if (changed) {
+      localStorage.setItem('progress', JSON.stringify(progress));
+    }
+
+    return progress;
+  }
+
+  static getLocalState() {
+    const users = JSON.parse(localStorage.getItem('users') || '[]');
+    const wallets = JSON.parse(localStorage.getItem('wallets') || '{}');
+    const progress = this.normalizeProgress(JSON.parse(localStorage.getItem('progress') || '{}'));
+    return { users, wallets, progress };
+  }
+
+  static async pullAll() {
+    if (!(await this.ensureReady())) {
+      return false;
+    }
+
+    const { collection, getDocs } = window.firebaseHelpers;
+    const fs = window.firestore;
+
+    const [usersSnap, walletsSnap, progressSnap] = await Promise.all([
+      getDocs(collection(fs, 'users')),
+      getDocs(collection(fs, 'wallets')),
+      getDocs(collection(fs, 'progressRecords'))
+    ]);
+
+    if (usersSnap.empty && walletsSnap.empty && progressSnap.empty) {
+      return false;
+    }
+
+    const users = usersSnap.docs.map(item => item.data());
+    const wallets = {};
+    walletsSnap.docs.forEach(item => {
+      wallets[item.id] = item.data();
+    });
+
+    const progress = {};
+    progressSnap.docs.forEach(item => {
+      const record = item.data();
+      if (!record.userId) return;
+      if (!progress[record.userId]) progress[record.userId] = [];
+      progress[record.userId].push(record);
+    });
+
+    Object.keys(progress).forEach(userId => {
+      progress[userId].sort((a, b) => new Date(a.date) - new Date(b.date));
+    });
+
+    localStorage.setItem('users', JSON.stringify(users));
+    localStorage.setItem('wallets', JSON.stringify(wallets));
+    localStorage.setItem('progress', JSON.stringify(progress));
+    return true;
+  }
+
+  static async pushAll() {
+    if (!(await this.ensureReady())) {
+      return false;
+    }
+
+    const { collection, doc, getDocs, setDoc, deleteDoc } = window.firebaseHelpers;
+    const fs = window.firestore;
+    const state = this.getLocalState();
+
+    const localUserIds = new Set(state.users.map(user => user.id));
+    const cloudUsersSnap = await getDocs(collection(fs, 'users'));
+    await Promise.all(cloudUsersSnap.docs.map(async item => {
+      if (!localUserIds.has(item.id)) {
+        await deleteDoc(doc(fs, 'users', item.id));
+      }
+    }));
+    await Promise.all(state.users.filter(user => user.id).map(user => setDoc(doc(fs, 'users', user.id), user)));
+
+    const localWalletIds = new Set(Object.keys(state.wallets));
+    const cloudWalletsSnap = await getDocs(collection(fs, 'wallets'));
+    await Promise.all(cloudWalletsSnap.docs.map(async item => {
+      if (!localWalletIds.has(item.id)) {
+        await deleteDoc(doc(fs, 'wallets', item.id));
+      }
+    }));
+    await Promise.all(Object.entries(state.wallets).map(([userId, wallet]) => setDoc(doc(fs, 'wallets', userId), wallet)));
+
+    const localProgressRecords = [];
+    Object.entries(state.progress).forEach(([userId, records]) => {
+      records.forEach(record => {
+        localProgressRecords.push(Object.assign({}, record, { userId }));
+      });
+    });
+
+    const localProgressIds = new Set(localProgressRecords.map(record => record.id));
+    const cloudProgressSnap = await getDocs(collection(fs, 'progressRecords'));
+    await Promise.all(cloudProgressSnap.docs.map(async item => {
+      if (!localProgressIds.has(item.id)) {
+        await deleteDoc(doc(fs, 'progressRecords', item.id));
+      }
+    }));
+    await Promise.all(localProgressRecords.map(record => {
+      if (!record.id) {
+        record.id = `record_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+      }
+      return setDoc(doc(fs, 'progressRecords', record.id), record);
+    }));
+
+    return true;
+  }
+
+  static async bootstrap() {
+    const loadedFromCloud = await this.pullAll();
+    if (!loadedFromCloud) {
+      await this.pushAll();
+    }
+    return loadedFromCloud;
+  }
+
+  static queuePush() {
+    void this.pushAll().catch(error => console.error('Firebase sync failed', error));
+  }
+}
+
+window.CloudStore = CloudStore;
+
 class Auth {
   static init() {
     const defaultUsers = [
@@ -102,6 +246,7 @@ class Auth {
 
     users.push(newStudent);
     localStorage.setItem('users', JSON.stringify(users));
+    CloudStore.queuePush();
 
     // Initialize wallet for new student
     const wallets = JSON.parse(localStorage.getItem('wallets') || '{}');
@@ -112,6 +257,7 @@ class Auth {
     const progress = JSON.parse(localStorage.getItem('progress') || '{}');
     progress[newStudent.id] = [];
     localStorage.setItem('progress', JSON.stringify(progress));
+    CloudStore.queuePush();
 
     return { success: true, user: newStudent };
   }
@@ -123,6 +269,7 @@ class Auth {
     if (user && user.role === 'student') {
       user.level = level;
       localStorage.setItem('users', JSON.stringify(users));
+      CloudStore.queuePush();
       return { success: true };
     }
     return { success: false, error: 'Student not found' };
@@ -164,6 +311,7 @@ class Auth {
     }
 
     localStorage.setItem('users', JSON.stringify(users));
+    CloudStore.queuePush();
 
     const currentUser = Auth.getCurrentUser();
     if (currentUser && currentUser.id === studentId) {
@@ -191,6 +339,7 @@ class Auth {
     const progress = JSON.parse(localStorage.getItem('progress') || '{}');
     delete progress[studentId];
     localStorage.setItem('progress', JSON.stringify(progress));
+    CloudStore.queuePush();
 
     const currentUser = Auth.getCurrentUser();
     if (currentUser && currentUser.id === studentId) {
@@ -230,6 +379,7 @@ class Wallet {
     });
 
     localStorage.setItem('wallets', JSON.stringify(wallets));
+    CloudStore.queuePush();
     return wallets[userId];
   }
 
@@ -250,6 +400,7 @@ class Wallet {
     });
 
     localStorage.setItem('wallets', JSON.stringify(wallets));
+    CloudStore.queuePush();
     return { success: true, balance: wallets[userId].balance };
   }
 
@@ -274,6 +425,7 @@ class Progress {
     });
 
     localStorage.setItem('progress', JSON.stringify(progress));
+    CloudStore.queuePush();
     return true;
   }
 
@@ -290,6 +442,7 @@ class Progress {
     });
 
     localStorage.setItem('progress', JSON.stringify(progress));
+    CloudStore.queuePush();
     return true;
   }
 
@@ -310,6 +463,7 @@ class Progress {
 
     progress[userId].push(record);
     localStorage.setItem('progress', JSON.stringify(progress));
+    CloudStore.queuePush();
     return record;
   }
 
@@ -329,6 +483,7 @@ class Progress {
     record.claimed = true;
     record.claimedAt = new Date().toISOString();
     localStorage.setItem('progress', JSON.stringify(progress));
+    CloudStore.queuePush();
     return { success: true, points: record.points || 1, record };
   }
 
