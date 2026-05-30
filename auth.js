@@ -247,18 +247,24 @@ class Auth {
           const loginQuery = query(
             collection(fs, 'users'),
             where('username', '==', nextUsername),
-            limit(1)
+            limit(10)
           );
           const loginSnap = await getDocs(loginQuery);
           if (!loginSnap.empty) {
-            const userData = loginSnap.docs[0].data();
-            const user = Object.assign({}, userData, { id: userData.id || loginSnap.docs[0].id });
-            if (String(user.password) !== nextPassword) {
-              return { success: false, error: 'Invalid username or password' };
+            const matchingDoc = loginSnap.docs.find(docSnap => {
+              const data = docSnap.data();
+              return String(data.password) === nextPassword;
+            });
+
+            if (matchingDoc) {
+              const userData = matchingDoc.data();
+              const user = Object.assign({}, userData, { id: userData.id || matchingDoc.id });
+              localStorage.setItem('currentUser', JSON.stringify(user));
+              await window.CloudStore.pullAll();
+              return { success: true, user };
             }
-            localStorage.setItem('currentUser', JSON.stringify(user));
-            await window.CloudStore.pullAll();
-            return { success: true, user };
+
+            return { success: false, error: 'Invalid username or password' };
           }
         }
 
