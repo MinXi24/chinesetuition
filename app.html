@@ -1121,13 +1121,25 @@
         }
 
         filteredStudents.forEach(s => {
-            const totalListens = Progress.getStudentPracticeHistory(s.id).rawRecords.length;
+            const localListens = Progress.getStudentPracticeHistory(s.id).rawRecords.length;
             const stats = Progress.getStudentStats(s.id);
             const badge = 'badge-' + s.level.toLowerCase();
-            tbody.innerHTML += `<tr>
+            
+            // Start fetch of Firebase listening count asynchronously
+            Progress.getListeningCountFromFirebase(s.id).then(firebaseListens => {
+              const displayListens = firebaseListens > 0 ? firebaseListens : localListens;
+              const row = document.querySelector(`tr[data-student-id="${s.id}"]`);
+              if (row) {
+                row.querySelector('td:nth-child(3)').innerHTML = `<strong>${displayListens}</strong>`;
+              }
+            }).catch(err => {
+              console.error('Failed to get Firebase listens for', s.id, err);
+            });
+            
+            tbody.innerHTML += `<tr data-student-id="${s.id}">
                 <td><button class="student-name-link" onclick="openStudentHistory('${s.id}')">${s.name}</button></td>
                 <td><span class="badge ${badge}">${s.level}</span></td>
-                <td><strong>${totalListens}</strong></td>
+                <td><strong>${localListens}</strong></td>
                 <td>${stats.totalQuizzes}</td>
                 <td>${stats.averageQuizScore}%</td>
                 <td>

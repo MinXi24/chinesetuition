@@ -184,39 +184,207 @@ class CloudStore {
   }
 
   static async pushAll() {
+    console.log('[pushAll] Starting...');
     if (!(await this.ensureReady())) {
+      console.warn('[pushAll] Firebase not ready');
       return false;
     }
 
     const { doc, setDoc } = window.firebaseHelpers;
     const fs = window.firestore;
     const state = this.getLocalState();
-
-    await Promise.all(state.users.filter(user => user.id).map(user => setDoc(doc(fs, 'users', user.id), user)));
-
-    await Promise.all(Object.entries(state.wallets).map(([userId, wallet]) => setDoc(doc(fs, 'wallets', userId), wallet)));
-
-    const localProgressRecords = [];
-    Object.entries(state.progress).forEach(([userId, records]) => {
-      records.forEach(record => {
-        localProgressRecords.push(Object.assign({}, record, { userId }));
-      });
+    console.log('[pushAll] Local state:', {
+      usersCount: state.users.length,
+      walletsCount: Object.keys(state.wallets).length,
+      progressCount: Object.keys(state.progress).length
     });
 
-    await Promise.all(localProgressRecords.map(record => {
-      if (!record.id) {
-        record.id = `record_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+    try {
+      await Promise.all(state.users.filter(user => user.id).map(user => setDoc(doc(fs, 'users', user.id), user)));
+      console.log('[pushAll] Users pushed');
+
+      await Promise.all(Object.entries(state.wallets).map(([userId, wallet]) => setDoc(doc(fs, 'wallets', userId), wallet)));
+      console.log('[pushAll] Wallets pushed');
+
+      const localProgressRecords = [];
+      Object.entries(state.progress).forEach(([userId, records]) => {
+        records.forEach(record => {
+          localProgressRecords.push(Object.assign({}, record, { userId }));
+        });
+      });
+      console.log('[pushAll] Progress records to push:', localProgressRecords.length);
+
+      await Promise.all(localProgressRecords.map(record => {
+        if (!record.id) {
+          record.id = `record_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+        }
+        return setDoc(doc(fs, 'progressRecords', record.id), record);
+      }));
+      console.log('[pushAll] Progress records pushed');
+
+      try {
+        localStorage.setItem('lastSync', new Date().toISOString());
+        localStorage.removeItem('pendingSync');
+      } catch (e) {
+        console.warn('Unable to write lastSync to localStorage', e);
       }
-      return setDoc(doc(fs, 'progressRecords', record.id), record);
-    }));
+      console.log('[pushAll] SUCCESS');
+      return true;
+    } catch (e) {
+      console.error('[pushAll] FAILED:', e);
+      return false;
+    }
+  }
+
+  static async pushListeningRecord(userId, practiceKind, title, level) {
+    console.log('[pushListeningRecord] Called for userId:', userId, 'practiceKind:', practiceKind, 'title:', title);
+    
+    if (!(await this.ensureReady())) {
+      console.warn('[pushListeningRecord] Firebase not ready');
+      return false;
+    }
 
     try {
-      localStorage.setItem('lastSync', new Date().toISOString());
-      localStorage.removeItem('pendingSync');
+      const { doc, setDoc } = window.firebaseHelpers;
+      const fs = window.firestore;
+      
+      const listeningRecord = {
+        userId,
+        practiceKind,
+        title,
+        level,
+        timestamp: new Date().toISOString(),
+        deviceId: localStorage.getItem('deviceId') || 'unknown'
+      };
+
+      const recordId = `listen_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+      console.log('[pushListeningRecord] Pushing record:', recordId, listeningRecord);
+      
+      await setDoc(doc(fs, 'listeningHistory', recordId), listeningRecord);
+      console.log('[pushListeningRecord] SUCCESS - record pushed:', recordId);
+      return true;
     } catch (e) {
-      console.warn('Unable to write lastSync to localStorage', e);
+      console.error('[pushListeningRecord] FAILED:', e);
+      return false;
     }
-    return true;
+  }
+
+  static async getListeningCount(userId) {
+    console.log('[getListeningCount] Fetching for userId:', userId);
+    
+    if (!(await this.ensureReady())) {
+      console.warn('[getListeningCount] Firebase not ready');
+      return 0;
+    }
+
+    try {
+      const { collection, getDocs, query, where } = window.firebaseHelpers;
+      const fs = window.firestore;
+      
+      const q = query(collection(fs, 'listeningHistory'), where('userId', '==', userId));
+      const querySnapshot = await getDocs(q);
+      
+      const count = querySnapshot.size;
+      console.log('[getListeningCount] Found', count, 'records for userId:', userId);
+      return count;
+    } catch (e) {
+      console.error('[getListeningCount] FAILED:', e);
+      return 0;
+    }
+  }
+
+  static async getListeningCountByPractice(userId) {
+    if (!(await this.ensureReady())) {
+      console.warn('Firebase not ready for getListeningCountByPractice');
+      return {};
+    }
+
+    try {
+      const { collection, getDocs, query, where } = window.firebaseHelpers;
+      const fs = window.firestore;
+      
+      const q = query(collection(fs, 'listeningHistory'), where('userId', '==', userId));
+      const querySnapshot = await getDocs(q);
+      
+      const countByPractice = {};
+      querySnapshot.docs.forEach(doc => {
+        const data = doc.data();
+        const key = `${data.practiceKind}::${data.title}`;
+        countByPractice[key] = (countByPractice[key] || 0) + 1;
+      });
+      
+      console.log(`Listening counts by practice for ${userId}:`, countByPractice);
+      return countByPractice;
+    } catch (e) {
+      console.error('Failed to get listening count by practice from Firebase:', e);
+      return {};
+    }
+  }
+
+  static async getAllListeningRecords(userId) {
+    if (!(await this.ensureReady())) {
+      console.warn('Firebase not ready for getAllListeningRecords');
+      return [];
+    }
+
+    try {
+      const { collection, getDocs, query, where } = window.firebaseHelpers;
+      const fs = window.firestore;
+      
+      const q = query(collection(fs, 'listeningHistory'), where('userId', '==', userId));
+      const querySnapshot = await getDocs(q);
+      
+      const records = querySnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
+      
+      console.log(`Retrieved ${records.length} listening records for ${userId}:`, records);
+      return records;
+    } catch (e) {
+      console.error('Failed to get listening records from Firebase:', e);
+      return [];
+    }
+  }
+
+  static async debugShowAllData(userId) {
+    console.log('========== FIREBASE DEBUG INFO ==========');
+    console.log('User ID:', userId);
+    
+    // Check local storage
+    const localProgress = JSON.parse(localStorage.getItem('progress') || '{}');
+    const localRecords = localProgress[userId] || [];
+    console.log('Local localStorage records for user:', localRecords.length, localRecords);
+    
+    // Check listening history in Firebase
+    const listeningRecords = await this.getAllListeningRecords(userId);
+    console.log('Firebase listeningHistory records:', listeningRecords.length);
+    
+    // Check progressRecords in Firebase
+    if (!(await this.ensureReady())) {
+      console.warn('Firebase not ready');
+      return;
+    }
+    
+    try {
+      const { collection, getDocs, query, where } = window.firebaseHelpers;
+      const fs = window.firestore;
+      
+      const q = query(collection(fs, 'progressRecords'), where('userId', '==', userId));
+      const querySnapshot = await getDocs(q);
+      const progressRecords = querySnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
+      
+      console.log('Firebase progressRecords for user:', progressRecords.length, progressRecords);
+    } catch (e) {
+      console.error('Error fetching progressRecords:', e);
+    }
+    
+    console.log('Last Sync:', localStorage.getItem('lastSync'));
+    console.log('Pending Sync:', localStorage.getItem('pendingSync'));
+    console.log('========== END DEBUG INFO ==========');
   }
 
   static async bootstrap() {
@@ -265,6 +433,11 @@ class CloudStore {
 }
 
 window.CloudStore = CloudStore;
+
+// Debug function for user to check Firebase data
+window.debugFirebaseData = async function(userId) {
+  return CloudStore.debugShowAllData(userId);
+};
 
 class Auth {
   static init() {
@@ -625,6 +798,8 @@ class Progress {
   }
 
   static async recordPracticeAttempt(userId, practiceKind, title, level) {
+    console.log('[recordPracticeAttempt] Called for userId:', userId, 'practiceKind:', practiceKind, 'title:', title);
+    
     const progress = JSON.parse(localStorage.getItem('progress') || '{}');
     if (!progress[userId]) progress[userId] = [];
 
@@ -639,12 +814,22 @@ class Progress {
 
     progress[userId].push(record);
     localStorage.setItem('progress', JSON.stringify(progress));
+    console.log('[recordPracticeAttempt] Saved to localStorage. Total records for user:', progress[userId].length);
+    
     // Await immediate push to ensure record reaches cloud before continuing
     try {
-      await CloudStore.pushAll();
+      console.log('[recordPracticeAttempt] Calling pushAll()...');
+      const pushAllOk = await CloudStore.pushAll();
+      console.log('[recordPracticeAttempt] pushAll() returned:', pushAllOk);
+      
+      // Also push to dedicated listeningHistory collection for explicit tracking
+      console.log('[recordPracticeAttempt] Calling pushListeningRecord()...');
+      const listeningOk = await CloudStore.pushListeningRecord(userId, practiceKind, title, level);
+      console.log('[recordPracticeAttempt] pushListeningRecord() returned:', listeningOk);
     } catch (e) {
-      console.error('Failed to push practice attempt:', e);
+      console.error('[recordPracticeAttempt] ERROR during push:', e);
       // Fall back to queue in case of immediate push failure
+      console.log('[recordPracticeAttempt] Falling back to queuePush()');
       CloudStore.queuePush();
     }
     return record;
@@ -713,6 +898,12 @@ class Progress {
       rawRecords: practiceRecords,
       groupedRecords: Array.from(grouped.values()).sort((a, b) => new Date(b.lastPlayedAt) - new Date(a.lastPlayedAt))
     };
+  }
+
+  static async getListeningCountFromFirebase(userId) {
+    // Retrieve total listening count from Firebase listeningHistory collection
+    const count = await CloudStore.getListeningCount(userId);
+    return count;
   }
 
   static getStudentAttempts(userId) {
