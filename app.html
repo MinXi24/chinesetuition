@@ -835,6 +835,9 @@
         // Ensure dashboard is displayed with flex
         document.getElementById('dashboard').style.display = 'flex';
 
+        // Pull again after login/bootstrap so the active session starts from the freshest cloud state.
+        await refreshSessionFromCloud();
+
         if (currentUser.role === 'student') {
             showView('HOME', 'student');
             schedulePracticeSummaryRefresh();
@@ -939,8 +942,15 @@
         else if (item === 'Mini Games') goToModule('games');
     }
 
-    function showView(view, role) {
+    async function showView(view, role) {
         currentPage = view;
+
+        // Always refresh from cloud before rendering a new page so counts stay consistent across devices.
+        await refreshSessionFromCloud();
+
+        if (!currentUser) {
+            return;
+        }
 
         // Stop audio when leaving passages or modules
         stopPassage();
@@ -1755,7 +1765,7 @@
         speechSynthesis.speak(utterance);
     }
     function backToHome() {
-        showView('HOME', currentUser.role);
+        void showView('HOME', currentUser.role);
     }
 
     // Passages (from index.html)
@@ -1997,7 +2007,7 @@
     }
 
     function backToSpelling() {
-        showView('SPELLING', currentUser.role);
+        void showView('SPELLING', currentUser.role);
     }
 
     // Navigation
@@ -2024,6 +2034,18 @@
             void refreshSessionFromCloud().then(() => refreshVisibleData());
         }
     });
+
+    window.addEventListener('online', () => {
+        if (currentUser) {
+            void refreshSessionFromCloud().then(() => refreshVisibleData());
+        }
+    });
+
+    setInterval(() => {
+        if (currentUser && !document.hidden) {
+            void refreshSessionFromCloud().then(() => refreshVisibleData());
+        }
+    }, 120000);
 
     document.addEventListener('DOMContentLoaded', () => {
         void init();
