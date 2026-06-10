@@ -55,6 +55,7 @@ class CloudStore {
 
     const { collection, getDocs } = window.firebaseHelpers;
     const fs = window.firestore;
+    const localState = this.getLocalState();
 
     const [usersSnap, walletsSnap, progressSnap] = await Promise.all([
       getDocs(collection(fs, 'users')),
@@ -66,30 +67,42 @@ class CloudStore {
       return false;
     }
 
-    const users = usersSnap.docs.map(item => {
+    const usersById = new Map(localState.users.filter(user => user && user.id).map(user => [user.id, user]));
+    usersSnap.docs.forEach(item => {
       const data = item.data();
-      return Object.assign({}, data, { id: data.id || item.id });
+      const user = Object.assign({}, data, { id: data.id || item.id });
+      usersById.set(user.id, user);
     });
-    const wallets = {};
+    const users = Array.from(usersById.values());
+
+    const wallets = Object.assign({}, localState.wallets);
     walletsSnap.docs.forEach(item => {
-      wallets[item.id] = item.data();
+      wallets[item.id] = Object.assign({}, wallets[item.id] || {}, item.data());
     });
 
-    const progress = {};
+    const progressByUser = Object.entries(localState.progress).reduce((accumulator, [userId, records]) => {
+      accumulator[userId] = Array.isArray(records) ? records.map(record => Object.assign({}, record)) : [];
+      return accumulator;
+    }, {});
     progressSnap.docs.forEach(item => {
       const record = item.data();
       if (!record.userId) return;
-      if (!progress[record.userId]) progress[record.userId] = [];
-      progress[record.userId].push(record);
+      if (!progressByUser[record.userId]) progressByUser[record.userId] = [];
+      const existingIndex = progressByUser[record.userId].findIndex(itemRecord => itemRecord.id === record.id);
+      if (existingIndex === -1) {
+        progressByUser[record.userId].push(record);
+      } else {
+        progressByUser[record.userId][existingIndex] = Object.assign({}, progressByUser[record.userId][existingIndex], record);
+      }
     });
 
-    Object.keys(progress).forEach(userId => {
-      progress[userId].sort((a, b) => new Date(a.date) - new Date(b.date));
+    Object.keys(progressByUser).forEach(userId => {
+      progressByUser[userId].sort((a, b) => new Date(a.date) - new Date(b.date));
     });
 
     localStorage.setItem('users', JSON.stringify(users));
     localStorage.setItem('wallets', JSON.stringify(wallets));
-    localStorage.setItem('progress', JSON.stringify(progress));
+    localStorage.setItem('progress', JSON.stringify(progressByUser));
     return true;
   }
 
@@ -120,26 +133,12 @@ class CloudStore {
       return false;
     }
 
-    const { collection, doc, getDocs, setDoc, deleteDoc } = window.firebaseHelpers;
+    const { doc, setDoc } = window.firebaseHelpers;
     const fs = window.firestore;
     const state = this.getLocalState();
 
-    const localUserIds = new Set(state.users.map(user => user.id));
-    const cloudUsersSnap = await getDocs(collection(fs, 'users'));
-    await Promise.all(cloudUsersSnap.docs.map(async item => {
-      if (!localUserIds.has(item.id)) {
-        await deleteDoc(doc(fs, 'users', item.id));
-      }
-    }));
     await Promise.all(state.users.filter(user => user.id).map(user => setDoc(doc(fs, 'users', user.id), user)));
 
-    const localWalletIds = new Set(Object.keys(state.wallets));
-    const cloudWalletsSnap = await getDocs(collection(fs, 'wallets'));
-    await Promise.all(cloudWalletsSnap.docs.map(async item => {
-      if (!localWalletIds.has(item.id)) {
-        await deleteDoc(doc(fs, 'wallets', item.id));
-      }
-    }));
     await Promise.all(Object.entries(state.wallets).map(([userId, wallet]) => setDoc(doc(fs, 'wallets', userId), wallet)));
 
     const localProgressRecords = [];
@@ -149,13 +148,6 @@ class CloudStore {
       });
     });
 
-    const localProgressIds = new Set(localProgressRecords.map(record => record.id));
-    const cloudProgressSnap = await getDocs(collection(fs, 'progressRecords'));
-    await Promise.all(cloudProgressSnap.docs.map(async item => {
-      if (!localProgressIds.has(item.id)) {
-        await deleteDoc(doc(fs, 'progressRecords', item.id));
-      }
-    }));
     await Promise.all(localProgressRecords.map(record => {
       if (!record.id) {
         record.id = `record_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
@@ -272,8 +264,7 @@ class Auth {
 
       const result = this.login(username, password);
       if (result.success) {
-        // Keep login fast; hydrate wallets/progress in background.
-        void window.CloudStore.pullAll().catch(error => console.error('Background cloud pull failed', error));
+        await window.CloudStore.pullAll();
         return result;
       }
 
@@ -504,10 +495,12 @@ class Progress {
     const progress = JSON.parse(localStorage.getItem('progress') || '{}');
     if (!progress[userId]) progress[userId] = [];
 
+    const normalizedScore = typeof score === 'number' && !Number.isNaN(score) ? score : Number(score);
+
     progress[userId].push({
       type: 'game',
       id: gameId,
-      score,
+      score: Number.isFinite(normalizedScore) ? normalizedScore : 0,
       timeSpent,
       date: new Date().toISOString()
     });
@@ -529,6 +522,25 @@ class Progress {
       level,
       points: 1,
       claimed: false,
+      date: new Date().toISOString()
+    };
+
+    progress[userId].push(record);
+    localStorage.setItem('progress', JSON.stringify(progress));
+    CloudStore.queuePush();
+    return record;
+  }
+
+  static recordPracticeAttempt(userId, practiceKind, title, level) {
+    const progress = JSON.parse(localStorage.getItem('progress') || '{}');
+    if (!progress[userId]) progress[userId] = [];
+
+    const record = {
+      id: 'attempt_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8),
+      type: 'attempt',
+      practiceKind,
+      title,
+      level,
       date: new Date().toISOString()
     };
 
@@ -597,6 +609,13 @@ class Progress {
     };
   }
 
+  static getStudentAttempts(userId) {
+    const progress = JSON.parse(localStorage.getItem('progress') || '{}');
+    const attempts = (progress[userId] || []).filter(r => r.type === 'attempt')
+      .sort((a, b) => new Date(b.date) - new Date(a.date));
+    return attempts;
+  }
+
   static getStudentStats(userId) {
     const progressList = Progress.getStudentProgress(userId);
     const quizzes = progressList.filter(p => p.type === 'quiz');
@@ -635,11 +654,24 @@ class Progress {
             return;
           }
 
+          if (record.type === 'attempt') {
+            activities.push({
+              studentName: student.name,
+              studentId: userId,
+              activityType: record.practiceKind === 'passage' ? 'Passage Attempt' : 'Spelling Attempt',
+              title: record.title,
+              level: record.level,
+              date: record.date,
+              isAttempt: true
+            });
+            return;
+          }
+
           activities.push({
             studentName: student.name,
             studentId: userId,
             activityType: record.type === 'quiz' ? 'Quiz' : 'Game',
-            score: record.score,
+            score: record.score != null ? record.score : 0,
             date: record.date
           });
         });

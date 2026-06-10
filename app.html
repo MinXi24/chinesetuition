@@ -292,7 +292,7 @@
                 <div class="table-container">
                     <table>
                         <thead>
-                            <tr><th>Name</th><th>Level</th><th>E-Wallet</th><th>Quizzes</th><th>Avg</th><th>Action</th></tr>
+                            <tr><th>Name</th><th>Level</th><th>Listens</th><th>Quizzes</th><th>Avg</th><th>Action</th></tr>
                         </thead>
                         <tbody id="studentsTable"></tbody>
                     </table>
@@ -793,8 +793,28 @@
     };
 
     async function init() {
+        if (window.CloudStore) {
+            try {
+                await window.CloudStore.bootstrap();
+            } catch (error) {
+                console.error('Initial cloud sync failed', error);
+            }
+        }
+
         const userJSON = localStorage.getItem('currentUser');
         currentUser = userJSON ? JSON.parse(userJSON) : null;
+
+        if (currentUser) {
+            const users = JSON.parse(localStorage.getItem('users') || '[]');
+            const latestUser = users.find(user => user.id === currentUser.id);
+            if (latestUser) {
+                currentUser = latestUser;
+                localStorage.setItem('currentUser', JSON.stringify(latestUser));
+            } else {
+                Auth.logout();
+                currentUser = null;
+            }
+        }
 
         if (!currentUser) {
             document.getElementById('loginPage').style.display = 'flex';
@@ -820,6 +840,55 @@
         } else {
             showView('HOME', 'teacher');
         }
+    }
+
+    async function refreshSessionFromCloud() {
+        if (!currentUser || !window.CloudStore) {
+            return false;
+        }
+
+        try {
+            const synced = await window.CloudStore.pullAll();
+            if (!synced) {
+                return false;
+            }
+
+            const users = JSON.parse(localStorage.getItem('users') || '[]');
+            const latestUser = users.find(user => user.id === currentUser.id);
+
+            if (!latestUser) {
+                Auth.logout();
+                currentUser = null;
+                return false;
+            }
+
+            currentUser = latestUser;
+            localStorage.setItem('currentUser', JSON.stringify(latestUser));
+            return true;
+        } catch (error) {
+            console.error('Cloud refresh failed', error);
+            return false;
+        }
+    }
+
+    function refreshVisibleData() {
+        if (!currentUser) {
+            return;
+        }
+
+        document.getElementById('userName').textContent = currentUser.name;
+        document.getElementById('userLevelBadge').textContent = currentUser.level ? currentUser.level : currentUser.role.toUpperCase();
+
+        if (currentUser.role === 'student') {
+            updateStudentDash();
+            updateStudentWallet();
+            updatePracticeSummary();
+            return;
+        }
+
+        updateTeacherDash();
+        updateActivityFeed();
+        updateTeacherWalletList();
     }
 
     function setupMenu() {
@@ -993,6 +1062,15 @@
                 `;
             }
 
+            if (activity.isAttempt) {
+                return `
+                    <div class="activity-item">
+                        <strong>${activity.studentName}</strong> started ${activity.activityType} - ${activity.title}
+                        <div class="activity-time">${new Date(activity.date).toLocaleString()} • Attempt logged</div>
+                    </div>
+                `;
+            }
+
             return `
                 <div class="activity-item">
                     <strong>${activity.studentName}</strong> completed ${activity.activityType} - ${activity.title}
@@ -1018,13 +1096,13 @@
         }
 
         filteredStudents.forEach(s => {
-            const balance = Wallet.getBalance(s.id);
+            const totalListens = Progress.getStudentPracticeHistory(s.id).rawRecords.length;
             const stats = Progress.getStudentStats(s.id);
             const badge = 'badge-' + s.level.toLowerCase();
             tbody.innerHTML += `<tr>
                 <td><button class="student-name-link" onclick="openStudentHistory('${s.id}')">${s.name}</button></td>
                 <td><span class="badge ${badge}">${s.level}</span></td>
-                <td><strong>${balance}</strong></td>
+                <td><strong>${totalListens}</strong></td>
                 <td>${stats.totalQuizzes}</td>
                 <td>${stats.averageQuizScore}%</td>
                 <td>
@@ -1449,8 +1527,14 @@
 
         const audio = getPassageAudio(currentPassageId, currentPassageTrackIndex);
         if (!audio) return;
-
         const shouldRestart = audio.ended || audio.currentTime === 0 || audio.paused;
+        if (shouldRestart && currentUser && currentUser.role === 'student') {
+            const passage = passages.find(p => p.id === currentPassageId);
+            const track = getPassageTrack(passage, currentPassageTrackIndex);
+            if (passage && track) {
+                Progress.recordPracticeAttempt(currentUser.id, 'passage', `${passage.title} - ${track.label}`, passage.level);
+            }
+        }
         if (shouldRestart) {
             audio.currentTime = audio.ended ? 0 : audio.currentTime;
             audio.play().catch(err => console.error('Error playing passage audio:', err));
@@ -1776,6 +1860,9 @@
             };
         }
 
+        if (currentSpellingAudio && currentUser && currentUser.role === 'student') {
+            Progress.recordPracticeAttempt(currentUser.id, 'spelling', lesson.title, lesson.level);
+        }
         currentSpellingAudio.play().catch(err => console.error('Error playing spelling audio:', err));
     }
 
@@ -1912,14 +1999,14 @@
 
     // Initialize
     document.addEventListener('visibilitychange', () => {
-        if (!document.hidden && currentUser && currentUser.role === 'student') {
-            updatePracticeSummary();
+        if (!document.hidden && currentUser) {
+            void refreshSessionFromCloud().then(() => refreshVisibleData());
         }
     });
 
     window.addEventListener('focus', () => {
-        if (currentUser && currentUser.role === 'student') {
-            updatePracticeSummary();
+        if (currentUser) {
+            void refreshSessionFromCloud().then(() => refreshVisibleData());
         }
     });
 
