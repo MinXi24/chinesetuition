@@ -84,16 +84,65 @@ class CloudStore {
       accumulator[userId] = Array.isArray(records) ? records.map(record => Object.assign({}, record)) : [];
       return accumulator;
     }, {});
+    // Merge incoming progress records into local state with deduplication.
+    // Strategy:
+    // - If incoming record.id matches an existing record => merge, prefer newest date and claimed flag.
+    // - Else attempt to match by (practiceKind + title + level) within a 2-minute window and merge as duplicate.
+    // - Otherwise append as new record.
     progressSnap.docs.forEach(item => {
       const record = item.data();
       if (!record.userId) return;
       if (!progressByUser[record.userId]) progressByUser[record.userId] = [];
-      const existingIndex = progressByUser[record.userId].findIndex(itemRecord => itemRecord.id === record.id);
-      if (existingIndex === -1) {
-        progressByUser[record.userId].push(record);
-      } else {
-        progressByUser[record.userId][existingIndex] = Object.assign({}, progressByUser[record.userId][existingIndex], record);
+
+      const userRecords = progressByUser[record.userId];
+      // try id match first
+      if (record.id) {
+        const idx = userRecords.findIndex(r => r.id === record.id);
+        if (idx !== -1) {
+          // merge, prefer fields from the newest record
+          const existing = userRecords[idx];
+          const existingTime = existing.date ? Date.parse(existing.date) : 0;
+          const incomingTime = record.date ? Date.parse(record.date) : 0;
+          const merged = Object.assign({}, existing, record);
+          // keep claimed if either says claimed
+          merged.claimed = !!existing.claimed || !!record.claimed;
+          // prefer newest date
+          merged.date = incomingTime >= existingTime ? record.date : existing.date;
+          userRecords[idx] = merged;
+          return;
+        }
       }
+
+      // try heuristic match: same practiceKind+title+level within 2 minutes
+      const windowMs = 2 * 60 * 1000;
+      const keyMatch = userRecords.findIndex(r => {
+        try {
+          const sameKind = (r.practiceKind || '') === (record.practiceKind || '');
+          const sameTitle = (r.title || '').trim() === (record.title || '').trim();
+          const sameLevel = (r.level || '') === (record.level || '');
+          if (!sameKind || !sameTitle) return false;
+          if (!record.date || !r.date) return false;
+          return Math.abs(Date.parse(r.date) - Date.parse(record.date)) <= windowMs;
+        } catch (e) {
+          return false;
+        }
+      });
+
+      if (keyMatch !== -1) {
+        const existing = userRecords[keyMatch];
+        const existingTime = existing.date ? Date.parse(existing.date) : 0;
+        const incomingTime = record.date ? Date.parse(record.date) : 0;
+        const merged = Object.assign({}, existing, record);
+        merged.claimed = !!existing.claimed || !!record.claimed;
+        merged.date = incomingTime >= existingTime ? record.date : existing.date;
+        // keep existing id if present, otherwise take incoming id
+        merged.id = existing.id || record.id || `record_${Date.now()}_${Math.random().toString(36).slice(2,8)}`;
+        userRecords[keyMatch] = merged;
+        return;
+      }
+
+      // otherwise append
+      userRecords.push(record);
     });
 
     Object.keys(progressByUser).forEach(userId => {
@@ -103,6 +152,12 @@ class CloudStore {
     localStorage.setItem('users', JSON.stringify(users));
     localStorage.setItem('wallets', JSON.stringify(wallets));
     localStorage.setItem('progress', JSON.stringify(progressByUser));
+    try {
+      localStorage.setItem('lastSync', new Date().toISOString());
+      localStorage.removeItem('pendingSync');
+    } catch (e) {
+      console.warn('Unable to write lastSync to localStorage', e);
+    }
     return true;
   }
 
@@ -155,6 +210,12 @@ class CloudStore {
       return setDoc(doc(fs, 'progressRecords', record.id), record);
     }));
 
+    try {
+      localStorage.setItem('lastSync', new Date().toISOString());
+      localStorage.removeItem('pendingSync');
+    } catch (e) {
+      console.warn('Unable to write lastSync to localStorage', e);
+    }
     return true;
   }
 
@@ -167,7 +228,39 @@ class CloudStore {
   }
 
   static queuePush() {
-    void this.pushAll().catch(error => console.error('Firebase sync failed', error));
+    // Debounced push with exponential backoff and in-progress guard
+    if (!this._pushState) this._pushState = { inProgress: false, retry: 0 };
+
+    if (this._pushState.inProgress) {
+      // mark pending and increase retry hint
+      this._pushState.retry = Math.min((this._pushState.retry || 0) + 1, 6);
+      try { localStorage.setItem('pendingSync', 'true'); } catch (e) {}
+      return;
+    }
+
+    this._pushState.inProgress = true;
+    this._pushState.retry = this._pushState.retry || 0;
+    try { localStorage.setItem('pendingSync', 'true'); } catch (e) {}
+
+    const attempt = async () => {
+      try {
+        const ok = await this.pushAll();
+        if (ok) {
+          this._pushState.inProgress = false;
+          this._pushState.retry = 0;
+          try { localStorage.removeItem('pendingSync'); } catch (e) {}
+          return;
+        }
+        throw new Error('pushAll returned false');
+      } catch (err) {
+        console.error('Cloud push failed', err);
+        this._pushState.retry = (this._pushState.retry || 0) + 1;
+        const delay = Math.min(60000, Math.pow(2, this._pushState.retry) * 1000);
+        setTimeout(attempt, delay);
+      }
+    };
+
+    attempt();
   }
 }
 
