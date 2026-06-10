@@ -1502,7 +1502,7 @@
     function playPassageTrack(passageId, trackIndex, source) {
         showPassageReading(passageId, source, trackIndex);
         currentPassageTrackIndex = trackIndex;
-        playFullPassage();
+        void playFullPassage();
     }
 
     function pausePassageTrack(passageId, trackIndex, source) {
@@ -1515,7 +1515,7 @@
 
     function playPassageFromCard(passageId, source) {
         showPassageReading(passageId, source);
-        playFullPassage();
+        void playFullPassage();
     }
 
     function pausePassageFromCard(passageId, source) {
@@ -1543,7 +1543,7 @@
         currentPassageId = null;
     }
 
-    function playFullPassage() {
+    async function playFullPassage() {
         if (!currentPassageId) {
             const firstPassage = getAccessiblePassages()[0];
             if (!firstPassage) return;
@@ -1557,7 +1557,7 @@
             const passage = passages.find(p => p.id === currentPassageId);
             const track = getPassageTrack(passage, currentPassageTrackIndex);
             if (passage && track) {
-                Progress.recordPracticeAttempt(currentUser.id, 'passage', `${passage.title} - ${track.label}`, passage.level);
+                await Progress.recordPracticeAttempt(currentUser.id, 'passage', `${passage.title} - ${track.label}`, passage.level);
             }
         }
         if (shouldRestart) {
@@ -1863,7 +1863,7 @@
         showSpellingReading(lessonId);
     }
 
-    function playSpellingLesson() {
+    async function playSpellingLesson() {
         const lesson = currentSpellingLesson || getSpellingLessonsForLevel(currentSpellingLevel)[0];
         if (!lesson) return;
 
@@ -1886,7 +1886,7 @@
         }
 
         if (currentSpellingAudio && currentUser && currentUser.role === 'student') {
-            Progress.recordPracticeAttempt(currentUser.id, 'spelling', lesson.title, lesson.level);
+            await Progress.recordPracticeAttempt(currentUser.id, 'spelling', lesson.title, lesson.level);
         }
         currentSpellingAudio.play().catch(err => console.error('Error playing spelling audio:', err));
     }
@@ -1919,15 +1919,15 @@
     function claimCurrentPracticeReward() {
         if (!currentPracticeReward) return;
 
-        claimPracticeRewardById(currentPracticeReward.id);
+        void claimPracticeRewardById(currentPracticeReward.id);
     }
 
-    function claimPracticeRewardById(rewardId) {
+    async function claimPracticeRewardById(rewardId) {
         const progressRecords = Progress.getStudentProgress(currentUser.id);
         const rewardRecord = progressRecords.find(item => item.id === rewardId && item.type === 'practice');
         if (!rewardRecord) return;
 
-        const result = Progress.claimPracticeReward(currentUser.id, rewardId);
+        const result = await Progress.claimPracticeReward(currentUser.id, rewardId);
         if (!result.success) {
             alert('❌ ' + result.error);
             return;

@@ -624,7 +624,7 @@ class Progress {
     return record;
   }
 
-  static recordPracticeAttempt(userId, practiceKind, title, level) {
+  static async recordPracticeAttempt(userId, practiceKind, title, level) {
     const progress = JSON.parse(localStorage.getItem('progress') || '{}');
     if (!progress[userId]) progress[userId] = [];
 
@@ -639,11 +639,18 @@ class Progress {
 
     progress[userId].push(record);
     localStorage.setItem('progress', JSON.stringify(progress));
-    CloudStore.queuePush();
+    // Await immediate push to ensure record reaches cloud before continuing
+    try {
+      await CloudStore.pushAll();
+    } catch (e) {
+      console.error('Failed to push practice attempt:', e);
+      // Fall back to queue in case of immediate push failure
+      CloudStore.queuePush();
+    }
     return record;
   }
 
-  static claimPracticeReward(userId, rewardId) {
+  static async claimPracticeReward(userId, rewardId) {
     const progress = JSON.parse(localStorage.getItem('progress') || '{}');
     const records = progress[userId] || [];
     const record = records.find(item => item.id === rewardId && item.type === 'practice');
@@ -659,7 +666,13 @@ class Progress {
     record.claimed = true;
     record.claimedAt = new Date().toISOString();
     localStorage.setItem('progress', JSON.stringify(progress));
-    CloudStore.queuePush();
+    // Await immediate push to ensure reward claim syncs to cloud
+    try {
+      await CloudStore.pushAll();
+    } catch (e) {
+      console.error('Failed to push reward claim:', e);
+      CloudStore.queuePush();
+    }
     return { success: true, points: record.points || 1, record };
   }
 
