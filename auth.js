@@ -14,6 +14,12 @@ class CloudStore {
     static syncInProgress = false;
 
     static async bootstrap() {
+        const ready = await firestoreReady;
+        if (!ready) {
+            console.warn('Firestore imports failed, skipping bootstrap');
+            return false;
+        }
+
         if (typeof firebase === 'undefined' || !firebase.firestore) {
             console.warn('Firebase not loaded');
             return false;
@@ -36,6 +42,8 @@ class CloudStore {
 
     // Pull all data from Firebase into localStorage cache
     static async pullAll() {
+        const ready = await firestoreReady;
+        if (!ready) return false;
         if (!this.fs || !this.isOnline) return false;
         if (this.syncInProgress) return false;
 
@@ -77,6 +85,8 @@ class CloudStore {
 
     // Push a single new record to Firebase by id (no full pushAll)
     static async pushRecord(collectionName, record) {
+        const ready = await firestoreReady;
+        if (!ready) return false;
         if (!this.fs) return false;
         try {
             await setDoc(doc(this.fs, collectionName, record.id), record);
@@ -97,6 +107,8 @@ class CloudStore {
 
     // Delete document from Firebase
     static async deleteDocument(collectionName, docId) {
+        const ready = await firestoreReady;
+        if (!ready) return false;
         if (!this.fs) return false;
         try {
             await deleteDoc(doc(this.fs, collectionName, docId));
@@ -109,6 +121,8 @@ class CloudStore {
 
     // Delete all progress records for a user from Firebase
     static async deleteUserProgress(userId) {
+        const ready = await firestoreReady;
+        if (!ready) return false;
         if (!this.fs) return false;
         try {
             const q = query(
@@ -129,6 +143,8 @@ class CloudStore {
 
     // Get listening count from Firebase (passage + spelling completed only)
     static async getListeningCount(userId) {
+        const ready = await firestoreReady;
+        if (!ready) return 0;
         if (!this.fs) return 0;
         try {
             const q = query(
@@ -151,6 +167,8 @@ class CloudStore {
     }
 
     static async getPassageCount(userId) {
+        const ready = await firestoreReady;
+        if (!ready) return 0;
         if (!this.fs) return 0;
         try {
             const q = query(
@@ -169,6 +187,8 @@ class CloudStore {
     }
 
     static async getSpellingCount(userId) {
+        const ready = await firestoreReady;
+        if (!ready) return 0;
         if (!this.fs) return 0;
         try {
             const q = query(
@@ -190,7 +210,8 @@ class CloudStore {
 // Firebase Firestore helpers
 let collection, query, where, getDocs, setDoc, doc, deleteDoc;
 
-(async () => {
+// Replaced floating IIFE with a proper promise that resolves when imports are ready
+const firestoreReady = (async () => {
     try {
         const firestore = await import('https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js');
         collection = firestore.collection;
@@ -200,8 +221,10 @@ let collection, query, where, getDocs, setDoc, doc, deleteDoc;
         setDoc = firestore.setDoc;
         doc = firestore.doc;
         deleteDoc = firestore.deleteDoc;
+        return true;
     } catch (e) {
         console.warn('Firestore imports failed:', e);
+        return false;
     }
 })();
 
@@ -230,7 +253,7 @@ class Auth {
             };
             users.push(teacher);
             localStorage.setItem('users', JSON.stringify(users));
-            CloudStore.pushUser(teacher);
+            CloudStore.pushUser(teacher); // Async, safely waits for firestoreReady internally
         }
     }
 
