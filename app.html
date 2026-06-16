@@ -679,6 +679,7 @@
     // Init & Auth
     // =====================================================
     async function init() {
+        // Bootstrap Firebase and pre-load all data from Firestore
         if (window.CloudStore) {
             try {
                 await window.CloudStore.bootstrap();
@@ -687,20 +688,9 @@
             }
         }
 
+        // Session comes from localStorage (set at login or by pullAll)
         const userJSON = localStorage.getItem('currentUser');
         currentUser = userJSON ? JSON.parse(userJSON) : null;
-
-        if (currentUser) {
-            const users = JSON.parse(localStorage.getItem('users') || '[]');
-            const latestUser = users.find(u => u.id === currentUser.id);
-            if (latestUser) {
-                currentUser = latestUser;
-                localStorage.setItem('currentUser', JSON.stringify(latestUser));
-            } else {
-                Auth.logout();
-                currentUser = null;
-            }
-        }
 
         if (!currentUser) {
             document.getElementById('loginPage').style.display = 'flex';
@@ -717,7 +707,11 @@
         document.getElementById('userLevelBadge').textContent = currentUser.level ? currentUser.level : currentUser.role.toUpperCase();
 
         setupMenu();
-        await refreshSessionFromCloud();
+
+        // Also pre-load this user's own progress if they are a student
+        if (currentUser.role === 'student' && window.Progress) {
+            await Progress.fetchStudentProgress(currentUser.id);
+        }
 
         if (currentUser.role === 'student') {
             showView('HOME', 'student');
@@ -733,15 +727,18 @@
             const synced = await window.CloudStore.pullAll();
             if (!synced) return false;
 
-            const users = JSON.parse(localStorage.getItem('users') || '[]');
-            const latestUser = users.find(u => u.id === currentUser.id);
-            if (!latestUser) {
+            // Reload currentUser from localStorage (pullAll updates it)
+            const userJSON = localStorage.getItem('currentUser');
+            if (!userJSON) {
+                // User was deleted from Firestore
                 Auth.logout();
                 currentUser = null;
+                document.getElementById('loginPage').style.display = 'flex';
+                document.getElementById('dashboard').classList.remove('active');
+                document.getElementById('dashboard').style.display = 'none';
                 return false;
             }
-            currentUser = latestUser;
-            localStorage.setItem('currentUser', JSON.stringify(latestUser));
+            currentUser = JSON.parse(userJSON);
 
             // Update sync indicator
             const lastSync = localStorage.getItem('lastSync');
@@ -840,10 +837,10 @@
         if (role === 'teacher') {
             if (view === 'HOME') {
                 document.getElementById('teacherHomePage').classList.add('active');
-                updateActivityFeed();
+                void updateActivityFeed();
             } else if (view === 'STUDENTS') {
                 document.getElementById('teacherStudentsPage').classList.add('active');
-                updateTeacherStudentsList();
+                void updateTeacherStudentsList();
                 document.getElementById('newStudentName').value = '';
                 document.getElementById('newStudentUsername').value = '';
                 document.getElementById('newStudentPassword').value = '';
@@ -859,7 +856,7 @@
         } else {
             if (view === 'HOME') {
                 document.getElementById('studentHomePage').classList.add('active');
-                updateStudentDash();
+                void updateStudentDash();
             } else if (view === 'PASSAGES') {
                 document.getElementById('passagesSelectionPage').classList.add('active');
                 displayPassagesSelection();
@@ -889,7 +886,7 @@
     // =====================================================
     // Student Dashboard
     // =====================================================
-    function updateStudentDash() {
+    async function updateStudentDash() {
         document.getElementById('studentName').textContent = currentUser.name;
         flashcards = flashcardData[currentUser.level] || [];
         document.getElementById('cardTotal').textContent = flashcards.length;
@@ -897,9 +894,12 @@
         updatePracticeSummary();
     }
 
-    function updatePracticeSummary() {
+    async function updatePracticeSummary() {
         const container = document.getElementById('practiceSummary');
         if (!container || !currentUser) return;
+
+        // Always fetch fresh data from Firestore
+        await Progress.fetchStudentProgress(currentUser.id);
 
         const practiceRecords = Progress.getStudentProgress(currentUser.id)
             .filter(r => r.type === 'practice' && r.completed);
@@ -949,8 +949,12 @@
     // =====================================================
     // Teacher Dashboard
     // =====================================================
-    function updateActivityFeed() {
+    async function updateActivityFeed() {
         document.getElementById('teacherName').textContent = currentUser.name;
+        // Ensure all student progress is loaded fresh from Firestore
+        const students = Auth.getStudents();
+        await Promise.all(students.map(s => Progress.fetchStudentProgress(s.id)));
+
         const activities = Progress.getAllStudentActivities();
         const feedHtml = activities.map(activity => {
             if (activity.activityType === 'Quiz' || activity.activityType === 'Game') {
@@ -976,7 +980,12 @@
     // =====================================================
     // Teacher Students List — FIXED
     // =====================================================
-    function updateTeacherStudentsList() {
+    async function updateTeacherStudentsList() {
+        // Always fetch fresh student list from Firestore before rendering
+        if (window.Auth && window.Auth.refreshStudents) {
+            await Auth.refreshStudents();
+        }
+
         const students = Auth.getStudents();
         const tbody = document.getElementById('studentsTable');
         tbody.innerHTML = '';
@@ -995,8 +1004,12 @@
             return;
         }
 
+        // Pre-load progress for all students in parallel
+        await Promise.all(filteredStudents.map(s => Progress.fetchStudentProgress(s.id)));
+
         filteredStudents.forEach(s => {
-            const localListens = Progress.getStudentPracticeHistory(s.id).rawRecords.length;
+            const history = Progress.getStudentPracticeHistory(s.id);
+            const localListens = history.rawRecords.length;
             const stats = Progress.getStudentStats(s.id);
             const badge = 'badge-' + s.level.toLowerCase();
 
@@ -1016,18 +1029,10 @@
                 </td>
             `;
             tbody.appendChild(row);
-
-            // Async update listen count from Firebase — only replace if Firebase returns more than local cache
-            Progress.getListeningCountFromFirebase(s.id).then(firebaseCount => {
-                const cell = row.querySelector('.listen-count-cell');
-                if (cell && firebaseCount > localListens) {
-                    cell.innerHTML = `<strong>${firebaseCount}</strong>`;
-                }
-            });
         });
     }
 
-    function createStudent() {
+    async function createStudent() {
         const name = document.getElementById('newStudentName').value;
         const username = document.getElementById('newStudentUsername').value;
         const password = document.getElementById('newStudentPassword').value;
@@ -1038,7 +1043,7 @@
             return;
         }
 
-        const result = Auth.signup(username, password, name, level);
+        const result = await Auth.signup(username, password, name, level);
         if (result.success) {
             showMsg('createMessage', '✅ Student created!', 'success');
             document.getElementById('newStudentName').value = '';
@@ -1081,14 +1086,14 @@
         selectedEditStudentId = null;
     }
 
-    function saveEditedStudent() {
+    async function saveEditedStudent() {
         if (!selectedEditStudentId) return;
         const name = document.getElementById('editStudentName').value;
         const username = document.getElementById('editStudentUsername').value;
         const password = document.getElementById('editStudentPassword').value;
         const level = document.getElementById('editStudentLevel').value;
 
-        const result = Auth.updateStudent(selectedEditStudentId, { name, username, password, level });
+        const result = await Auth.updateStudent(selectedEditStudentId, { name, username, password, level });
         if (result.success) {
             document.getElementById('editStudentMessage').innerHTML = '✅ Student updated!';
             updateTeacherStudentsList();
@@ -1098,10 +1103,13 @@
         }
     }
 
-    function openStudentHistory(studentId) {
+    async function openStudentHistory(studentId) {
         selectedStudentHistoryId = studentId;
         const student = Auth.getStudents().find(s => s.id === studentId);
         if (!student) return;
+
+        // Always fetch fresh data from Firestore before showing history
+        await Progress.fetchStudentProgress(studentId);
 
         const historyData = Progress.getStudentPracticeHistory(studentId);
         const container = document.getElementById('studentHistoryContent');
