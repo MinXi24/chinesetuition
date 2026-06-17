@@ -39,12 +39,24 @@
     /** Wait until window.__FIREBASE_INIT_DONE is true, or reject after timeout. */
     function waitForFirebase(timeoutMs = 8000) {
         return new Promise((resolve, reject) => {
-            if (window.__FIREBASE_INIT_DONE) { resolve(); return; }
+            console.log('⏳ WAITING FOR FIREBASE...', { firebaseReady: window.__FIREBASE_INIT_DONE });
+            if (window.__FIREBASE_INIT_DONE) { 
+                console.log('✅ FIREBASE ALREADY READY');
+                resolve(); 
+                return; 
+            }
             const start = Date.now();
             const iv = setInterval(() => {
-                if (window.__FIREBASE_INIT_DONE) { clearInterval(iv); resolve(); return; }
+                if (window.__FIREBASE_INIT_DONE) { 
+                    const elapsed = Date.now() - start;
+                    console.log('✅ FIREBASE INITIALIZED after', elapsed, 'ms');
+                    clearInterval(iv); 
+                    resolve(); 
+                    return; 
+                }
                 if (Date.now() - start > timeoutMs) {
                     clearInterval(iv);
+                    console.error('❌ FIREBASE INIT TIMEOUT after', timeoutMs, 'ms');
                     reject(new Error('Firebase did not initialise within ' + timeoutMs + 'ms'));
                 }
             }, 80);
@@ -69,6 +81,62 @@
     }
 
     // ─────────────────────────────────────────────
+    // Debug utilities
+    // ─────────────────────────────────────────────
+
+    const Debug = {
+        /**
+         * Lists all users in Firestore for debugging
+         * Call from browser console: window.Debug.listAllUsers()
+         */
+        async listAllUsers() {
+            try {
+                console.log('📋 FETCHING ALL USERS FROM FIRESTORE...');
+                await waitForFirebase();
+                const snap = await fsGetDocs(fsCol('users'));
+                const users = snap.docs.map(d => ({
+                    id: d.id,
+                    ...d.data()
+                }));
+                console.log('📊 USERS IN FIRESTORE:', users);
+                console.table(users.map(u => ({
+                    username: u.username,
+                    password: u.password,
+                    name: u.name,
+                    role: u.role,
+                    level: u.level
+                })));
+                return users;
+            } catch (err) {
+                console.error('❌ Error listing users:', err);
+            }
+        },
+
+        /**
+         * Tests login with given credentials
+         * Call from browser console: window.Debug.testLogin('teacher', 'admin123')
+         */
+        async testLogin(username, password) {
+            console.log('🧪 TESTING LOGIN:', { username, password });
+            const result = await Auth.loginAsync(username, password);
+            console.log('🧪 LOGIN TEST RESULT:', result);
+            return result;
+        },
+
+        /**
+         * Checks Firebase initialization status
+         */
+        checkFirebase() {
+            console.log('🔥 FIREBASE STATUS:', {
+                initialized: window.__FIREBASE_INIT_DONE,
+                hasApp: !!window.firebaseApp,
+                hasFirestore: !!window.firestore,
+                hasHelpers: !!window.firebaseHelpers
+            });
+        }
+    };
+
+    // ─────────────────────────────────────────────
     // Auth
     // ─────────────────────────────────────────────
 
@@ -80,35 +148,63 @@
          */
         async loginAsync(username, password) {
             try {
+                console.log('🔐 LOGIN ATTEMPT:', { username, passwordLength: password.length });
                 await waitForFirebase();
                 const trimmedUsername = username.trim();
                 const trimmedPassword = password.trim();
+                
+                console.log('📝 TRIMMED VALUES:', { trimmedUsername, trimmedPasswordLength: trimmedPassword.length });
                 
                 // Always query Firebase for the latest user data
                 const snap = await fsGetDocs(
                     fsQuery(fsCol('users'), fsWhere('username', '==', trimmedUsername))
                 );
                 
+                console.log('🔍 FIRESTORE QUERY RESULT:', { 
+                    empty: snap.empty, 
+                    docsCount: snap.docs.length,
+                    firebaseReady: window.__FIREBASE_INIT_DONE
+                });
+                
                 if (snap.empty) {
-                    console.warn('Login failed: User not found for username:', trimmedUsername);
+                    console.error('❌ LOGIN FAILED: User not found for username:', trimmedUsername);
+                    console.log('Available usernames in Firestore for debugging:', snap);
                     return { success: false, error: 'User not found.' };
                 }
                 
                 const userData = snap.docs[0].data();
+                console.log('✅ USER FOUND:', { 
+                    id: userData.id, 
+                    username: userData.username,
+                    storedPasswordLength: userData.password ? userData.password.length : 'UNDEFINED',
+                    role: userData.role
+                });
                 
                 // Verify password matches exactly
+                console.log('🔐 PASSWORD CHECK:', {
+                    provided: trimmedPassword,
+                    stored: userData.password,
+                    match: userData.password === trimmedPassword,
+                    providedLength: trimmedPassword.length,
+                    storedLength: userData.password ? userData.password.length : 0,
+                    providedBytes: Array.from(trimmedPassword).map(c => c.charCodeAt(0)),
+                    storedBytes: userData.password ? Array.from(userData.password).map(c => c.charCodeAt(0)) : []
+                });
+                
                 if (userData.password !== trimmedPassword) {
-                    console.warn('Login failed: Password mismatch for username:', trimmedUsername);
+                    console.error('❌ LOGIN FAILED: Password mismatch for username:', trimmedUsername);
+                    console.error('Password comparison failed');
                     return { success: false, error: 'Incorrect password.' };
                 }
                 
                 // Store only the current session user in localStorage
                 localStorage.setItem('currentUser', JSON.stringify(userData));
-                console.log('Login successful for user:', userData.id, userData.username);
+                console.log('✅ LOGIN SUCCESSFUL for user:', userData.id, userData.username);
                 return { success: true, user: userData };
             } catch (err) {
-                console.error('loginAsync error', err);
-                return { success: false, error: 'Login failed. Check your connection.' };
+                console.error('❌ loginAsync EXCEPTION:', err);
+                console.error('Stack trace:', err.stack);
+                return { success: false, error: 'Login failed. Check your connection. Error: ' + err.message };
             }
         },
 
@@ -456,10 +552,15 @@
             const TEACHER_PASSWORD = 'admin123';
 
             try {
+                console.log('🌱 SEEDING TEACHER ACCOUNT...');
                 const snap = await fsGetDocs(
                     fsQuery(fsCol('users'), fsWhere('role', '==', 'teacher'))
                 );
-                if (!snap.empty) return; // Teacher already exists
+                
+                if (!snap.empty) {
+                    console.log('✅ TEACHER ACCOUNT ALREADY EXISTS:', snap.docs[0].data());
+                    return;
+                }
 
                 const teacher = {
                     id: uid(),
@@ -470,10 +571,12 @@
                     level: 'TEACHER',
                     createdAt: nowISO()
                 };
+                
+                console.log('📝 CREATING NEW TEACHER ACCOUNT:', { username: TEACHER_USERNAME, password: TEACHER_PASSWORD });
                 await fsSetDoc(fsDoc('users', teacher.id), teacher);
-                console.log('Default teacher account created:', TEACHER_USERNAME, '/', TEACHER_PASSWORD);
+                console.log('✅ DEFAULT TEACHER ACCOUNT CREATED:', TEACHER_USERNAME, '/', TEACHER_PASSWORD);
             } catch (err) {
-                console.error('_seedTeacher error', err);
+                console.error('❌ _seedTeacher error', err);
             }
         },
 
@@ -520,5 +623,6 @@
     window.Auth = Auth;
     window.Progress = Progress;
     window.CloudStore = CloudStore;
+    window.Debug = Debug;
 
 })();

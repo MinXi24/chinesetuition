@@ -769,13 +769,20 @@
         const username = document.getElementById('username').value;
         const password = document.getElementById('password').value;
         
+        console.log('🚀 LOGIN FORM SUBMITTED');
+        
         if (!username || !password) {
+            console.warn('❌ Missing credentials');
             showMsg('loginMessage', '❌ Please enter username and password', 'error');
             return;
         }
         
+        console.log('📤 Calling Auth.loginAsync...');
         const result = await Auth.loginAsync(username, password);
+        console.log('📥 Auth.loginAsync returned:', result);
+        
         if (result.success) {
+            console.log('✅ LOGIN SUCCESS - Initializing...');
             currentUser = result.user;
             // Clear any old cache from previous user
             if (window.Progress && window.Progress.clearCache) {
@@ -783,6 +790,7 @@
             }
             await init();
         } else {
+            console.error('❌ LOGIN FAILED:', result.error);
             showMsg('loginMessage', '❌ ' + (result.error || 'Invalid credentials'), 'error');
             document.getElementById('password').value = '';
         }
