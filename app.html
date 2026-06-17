@@ -682,17 +682,21 @@
         // Bootstrap Firebase and pre-load all data from Firestore
         if (window.CloudStore) {
             try {
-                await window.CloudStore.bootstrap();
+                const bootstrapResult = await window.CloudStore.bootstrap();
+                if (!bootstrapResult) {
+                    console.warn('Bootstrap returned false - Firebase may not be ready');
+                }
             } catch (error) {
                 console.error('Initial cloud sync failed', error);
             }
         }
 
-        // Session comes from localStorage (set at login or by pullAll)
+        // Session comes from localStorage (set at login)
         const userJSON = localStorage.getItem('currentUser');
         currentUser = userJSON ? JSON.parse(userJSON) : null;
 
         if (!currentUser) {
+            console.log('No current user in localStorage - showing login page');
             document.getElementById('loginPage').style.display = 'flex';
             document.getElementById('dashboard').classList.remove('active');
             document.getElementById('dashboard').style.display = 'none';
@@ -700,6 +704,7 @@
             return;
         }
 
+        console.log('Initializing dashboard for user:', currentUser.username, 'role:', currentUser.role);
         document.getElementById('loginPage').style.display = 'none';
         document.getElementById('dashboard').classList.add('active');
         document.getElementById('dashboard').style.display = 'flex';
@@ -724,6 +729,11 @@
     async function refreshSessionFromCloud() {
         if (!currentUser || !window.CloudStore) return false;
         try {
+            // Clear cache before pulling fresh data
+            if (window.Progress && window.Progress.clearCache) {
+                window.Progress.clearCache();
+            }
+            
             const synced = await window.CloudStore.pullAll();
             if (!synced) return false;
 
@@ -731,6 +741,7 @@
             const userJSON = localStorage.getItem('currentUser');
             if (!userJSON) {
                 // User was deleted from Firestore
+                console.warn('Current user was deleted from Firestore');
                 Auth.logout();
                 currentUser = null;
                 document.getElementById('loginPage').style.display = 'flex';
@@ -757,18 +768,35 @@
         e.preventDefault();
         const username = document.getElementById('username').value;
         const password = document.getElementById('password').value;
+        
+        if (!username || !password) {
+            showMsg('loginMessage', '❌ Please enter username and password', 'error');
+            return;
+        }
+        
         const result = await Auth.loginAsync(username, password);
         if (result.success) {
             currentUser = result.user;
+            // Clear any old cache from previous user
+            if (window.Progress && window.Progress.clearCache) {
+                window.Progress.clearCache();
+            }
             await init();
         } else {
             showMsg('loginMessage', '❌ ' + (result.error || 'Invalid credentials'), 'error');
+            document.getElementById('password').value = '';
         }
     }
 
     function handleLogout() {
         stopPassage();
         stopSpellingLesson();
+        
+        // Clear all caches before logout
+        if (window.Progress && window.Progress.clearCache) {
+            window.Progress.clearCache();
+        }
+        
         Auth.logout();
         document.getElementById('loginPage').style.display = 'flex';
         document.getElementById('dashboard').classList.remove('active');
@@ -951,6 +979,11 @@
     // =====================================================
     async function updateActivityFeed() {
         document.getElementById('teacherName').textContent = currentUser.name;
+        // IMPORTANT: Clear cache and always fetch fresh from Firestore for current teacher view
+        if (window.Progress && window.Progress.clearCache) {
+            window.Progress.clearCache();
+        }
+        
         // Ensure all student progress is loaded fresh from Firestore
         const students = Auth.getStudents();
         await Promise.all(students.map(s => Progress.fetchStudentProgress(s.id)));
@@ -1004,12 +1037,14 @@
             return;
         }
 
-        // Pre-load progress for all students in parallel
+        // Pre-load progress for all students in parallel (for history data)
         await Promise.all(filteredStudents.map(s => Progress.fetchStudentProgress(s.id)));
 
-        filteredStudents.forEach(s => {
+        // For each student, fetch FRESH listening count from Firebase (no cache)
+        for (const s of filteredStudents) {
             const history = Progress.getStudentPracticeHistory(s.id);
-            const localListens = history.rawRecords.length;
+            // ALWAYS get fresh count from Firestore, not from cache
+            const freshListenCount = await Progress.getListeningCountFromFirebase(s.id);
             const stats = Progress.getStudentStats(s.id);
             const badge = 'badge-' + s.level.toLowerCase();
 
@@ -1018,7 +1053,7 @@
             row.innerHTML = `
                 <td><button class="student-name-link" onclick="openStudentHistory('${s.id}')">${s.name}</button></td>
                 <td><span class="badge ${badge}">${s.level}</span></td>
-                <td class="listen-count-cell"><strong>${localListens}</strong></td>
+                <td class="listen-count-cell"><strong>${freshListenCount}</strong></td>
                 <td>${stats.totalQuizzes}</td>
                 <td>${stats.averageQuizScore}%</td>
                 <td>
@@ -1029,7 +1064,7 @@
                 </td>
             `;
             tbody.appendChild(row);
-        });
+        }
     }
 
     async function createStudent() {

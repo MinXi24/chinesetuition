@@ -74,23 +74,37 @@
 
     const Auth = {
         /**
-         * Login: fetch all users from Firestore and match credentials.
+         * Login: fetch user from Firestore using username and verify password.
+         * Always fetches fresh from Firestore to prevent cross-device conflicts.
          * Returns { success, user } or { success: false, error }.
          */
         async loginAsync(username, password) {
             try {
                 await waitForFirebase();
+                const trimmedUsername = username.trim();
+                const trimmedPassword = password.trim();
+                
+                // Always query Firebase for the latest user data
                 const snap = await fsGetDocs(
-                    fsQuery(fsCol('users'), fsWhere('username', '==', username.trim()))
+                    fsQuery(fsCol('users'), fsWhere('username', '==', trimmedUsername))
                 );
+                
                 if (snap.empty) {
+                    console.warn('Login failed: User not found for username:', trimmedUsername);
                     return { success: false, error: 'User not found.' };
                 }
+                
                 const userData = snap.docs[0].data();
-                if (userData.password !== password) {
+                
+                // Verify password matches exactly
+                if (userData.password !== trimmedPassword) {
+                    console.warn('Login failed: Password mismatch for username:', trimmedUsername);
                     return { success: false, error: 'Incorrect password.' };
                 }
+                
+                // Store only the current session user in localStorage
                 localStorage.setItem('currentUser', JSON.stringify(userData));
+                console.log('Login successful for user:', userData.id, userData.username);
                 return { success: true, user: userData };
             } catch (err) {
                 console.error('loginAsync error', err);
@@ -365,6 +379,7 @@
         /**
          * Returns the count of completed listening records for a student directly
          * from Firestore (used for teacher dashboard listen count column).
+         * ALWAYS fetches fresh from Firestore, no cache.
          */
         async getListeningCountFromFirebase(userId) {
             try {
@@ -376,11 +391,20 @@
                         fsWhere('completed', '==', true)
                     )
                 );
+                console.log('Fetched listening count for user', userId, ':', snap.size);
                 return snap.size;
             } catch (err) {
                 console.error('getListeningCountFromFirebase error', err);
                 return 0;
             }
+        },
+
+        /**
+         * Clears all internal caches. Call this when you need fresh data.
+         */
+        clearCache() {
+            Progress._cache = {};
+            console.log('Progress cache cleared');
         },
 
         _cache: {}   // { [userId]: recordArray }
