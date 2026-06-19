@@ -4,165 +4,182 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>🌟 中文学习平台</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;600;700;800&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: 'Segoe UI', sans-serif; background: #f5f3f0; min-height: 100vh; }
+        body { font-family: 'Nunito', 'Segoe UI', sans-serif; background: var(--app-bg); min-height: 100vh; color: var(--text-dark); }
+        h1, h2, h3, .welcome-header, .reading-title, .login-box h1 { font-family: 'Baloo 2', 'Nunito', sans-serif; }
 
         :root {
-            --sidebar-bg: #E8F4F8;
-            --search-bg: #FFE8E8;
-            --card-bg: #E6E6FA;
-            --wallet-bg: #E0F7F6;
-            --text-dark: #2c2c2c;
-            --text-light: #999;
+            --app-bg: #FBF8FF;
+            --sidebar-bg: #F1ECFB;
+            --search-bg: #FFF0F5;
+            --card-bg: #EFE9FC;
+            --wallet-bg: #E6F7F3;
+            --text-dark: #423E5B;
+            --text-light: #9590AC;
+
+            --primary: #8C7AE6;
+            --primary-dark: #6F5CD6;
+            --accent-pink: #FF9EC4;
+            --accent-blue: #8FCFEA;
+            --accent-mint: #8FE3C7;
+            --accent-yellow: #FFD27F;
+            --accent-coral: #FF9B85;
         }
 
-        .login-page { display: flex; min-height: 100vh; background: linear-gradient(135deg, #FFB6C1 0%, #87CEEB 100%); justify-content: center; align-items: center; padding: 20px; }
-        .login-box { background: white; border-radius: 30px; padding: 50px; max-width: 400px; width: 100%; box-shadow: 0 20px 60px rgba(0,0,0,0.3); }
-        .login-box h1 { font-size: 2.5rem; color: #FF69B4; text-align: center; margin-bottom: 10px; }
+        .login-page { display: flex; min-height: 100vh; background: linear-gradient(135deg, #C9B6F2 0%, #8FCFEA 100%); justify-content: center; align-items: center; padding: 20px; }
+        .login-box { background: white; border-radius: 30px; padding: 50px; max-width: 400px; width: 100%; box-shadow: 0 20px 60px rgba(108, 92, 191, 0.25); }
+        .login-box h1 { font-size: 2.5rem; color: var(--primary); text-align: center; margin-bottom: 10px; }
         .login-box p { text-align: center; color: var(--text-light); margin-bottom: 25px; }
 
         .form-group { margin-bottom: 20px; }
-        label { display: block; margin-bottom: 8px; font-weight: 600; }
-        input { width: 100%; padding: 12px; border: 2px solid #e0e0e0; border-radius: 12px; font-size: 1rem; }
-        input:focus { outline: none; border-color: #FF69B4; }
+        label { display: block; margin-bottom: 8px; font-weight: 700; color: var(--text-dark); }
+        input { width: 100%; padding: 12px; border: 2px solid #E6E0F7; border-radius: 14px; font-size: 1rem; font-family: inherit; background: #FBFAFF; }
+        input:focus { outline: none; border-color: var(--primary); }
 
-        .btn-login { width: 100%; padding: 14px; background: linear-gradient(135deg, #FF69B4 0%, #FF1493 100%); color: white; border: none; border-radius: 12px; font-size: 1.1rem; font-weight: 600; cursor: pointer; }
+        .btn-login { width: 100%; padding: 14px; background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%); color: white; border: none; border-radius: 14px; font-size: 1.1rem; font-weight: 700; cursor: pointer; box-shadow: 0 8px 20px rgba(140, 122, 230, 0.35); }
+        .btn-login:hover { opacity: 0.95; transform: translateY(-1px); }
 
-        .message { padding: 12px; border-radius: 12px; margin-bottom: 15px; display: none; }
+        .message { padding: 12px; border-radius: 14px; margin-bottom: 15px; display: none; font-weight: 600; }
         .message.show { display: block; }
-        .message.error { background: #ffebee; color: #c62828; }
-        .message.success { background: #e8f5e9; color: #2e7d32; }
+        .message.error { background: #FFEAEF; color: #D6336C; }
+        .message.success { background: #E6F7ED; color: #2F9E5C; }
 
-        .dashboard { display: none; min-height: 100vh; background: #F5F3F0; }
+        .dashboard { display: none; min-height: 100vh; background: var(--app-bg); }
         .dashboard.active { display: flex; }
 
-        .sidebar { background: var(--sidebar-bg); width: 280px; min-height: 100vh; padding: 30px 20px; display: flex; flex-direction: column; align-items: center; box-shadow: 2px 0 10px rgba(0,0,0,0.05); }
-        .sidebar-logo { width: 100px; height: 100px; margin-bottom: 30px; }
+        .sidebar { background: linear-gradient(165deg, #8C7AE6 0%, #6F5CD6 100%); width: 280px; min-height: 100vh; padding: 30px 20px; display: flex; flex-direction: column; align-items: center; box-shadow: 4px 0 20px rgba(111, 92, 214, 0.25); position: relative; overflow: hidden; }
+        .sidebar::before { content: ''; position: absolute; width: 200px; height: 200px; border-radius: 50%; background: rgba(255,255,255,0.07); top: -60px; right: -70px; }
+        .sidebar::after { content: ''; position: absolute; width: 140px; height: 140px; border-radius: 50%; background: rgba(255,255,255,0.06); bottom: 40px; left: -60px; }
+        .sidebar-logo { width: 100px; height: 100px; margin-bottom: 30px; position: relative; z-index: 1; background: white; border-radius: 24px; display: flex; align-items: center; justify-content: center; padding: 10px; box-shadow: 0 8px 18px rgba(0,0,0,0.12); }
         .sidebar-logo img { width: 100%; height: 100%; object-fit: contain; }
-        .sidebar-menu { width: 100%; }
-        .menu-item { text-align: center; padding: 15px 10px; font-size: 0.95rem; font-weight: 500; color: var(--text-dark); cursor: pointer; margin: 10px 0; border-radius: 10px; transition: all 0.3s; }
-        .menu-item.active { background: rgba(255, 105, 180, 0.2); color: #FF69B4; font-weight: 600; }
-        .menu-item:hover { background: rgba(255, 105, 180, 0.1); }
+        .sidebar-menu { width: 100%; position: relative; z-index: 1; }
+        .menu-item { text-align: center; padding: 15px 10px; font-size: 0.95rem; font-weight: 700; color: rgba(255,255,255,0.85); cursor: pointer; margin: 10px 0; border-radius: 14px; transition: all 0.25s; }
+        .menu-item.active { background: white; color: var(--primary-dark); box-shadow: 0 6px 14px rgba(0,0,0,0.18); }
+        .menu-item:hover:not(.active) { background: rgba(255,255,255,0.16); color: white; }
 
         .view-section { display: none; }
         .view-section.active { display: block; }
 
         .main-content { flex: 1; display: flex; flex-direction: column; padding: 30px; }
         .header-section { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; }
-        .user-info { background: white; padding: 10px 20px; border-radius: 20px; font-size: 0.9rem; box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
-        .btn-logout { padding: 8px 20px; background: #FF69B4; color: white; border: none; border-radius: 20px; cursor: pointer; font-weight: 600; }
+        .user-info { background: white; padding: 10px 20px; border-radius: 20px; font-size: 0.9rem; font-weight: 700; box-shadow: 0 2px 10px rgba(140, 122, 230, 0.1); }
+        .btn-logout { padding: 8px 20px; background: var(--accent-coral); color: white; border: none; border-radius: 20px; cursor: pointer; font-weight: 700; }
 
-        .search-bar { background: var(--search-bg); padding: 15px 25px; border-radius: 30px; margin-bottom: 30px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
+        .search-bar { background: var(--search-bg); padding: 15px 25px; border-radius: 30px; margin-bottom: 30px; box-shadow: 0 2px 10px rgba(140, 122, 230, 0.08); }
         .search-bar input { border: none; background: transparent; width: 100%; font-size: 1rem; }
         .search-bar input:focus { outline: none; }
         .search-bar input::placeholder { color: #999; }
 
         .tabs { display: flex; gap: 10px; margin-bottom: 30px; flex-wrap: wrap; }
-        .tab-btn { padding: 12px 24px; background: white; border: 2px solid #ddd; border-radius: 20px; cursor: pointer; font-weight: 600; }
-        .tab-btn.active { background: #FF69B4; color: white; border-color: #FF69B4; }
+        .tab-btn { padding: 12px 24px; background: white; border: 2px solid #E6E0F7; border-radius: 20px; cursor: pointer; font-weight: 700; color: var(--text-dark); }
+        .tab-btn.active { background: var(--primary); color: white; border-color: var(--primary); }
 
         .content-grid { display: grid; grid-template-columns: 1fr; gap: 20px; }
-        .content-large { background: var(--card-bg); padding: 40px; border-radius: 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
+        .content-large { background: var(--card-bg); padding: 40px; border-radius: 22px; box-shadow: 0 4px 16px rgba(140, 122, 230, 0.1); }
         .content-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; }
-        .content-card { background: var(--card-bg); padding: 25px; border-radius: 20px; text-align: center; box-shadow: 0 2px 10px rgba(0,0,0,0.05); min-height: 150px; }
+        .content-card { background: var(--card-bg); padding: 25px; border-radius: 22px; text-align: center; box-shadow: 0 4px 16px rgba(140, 122, 230, 0.1); min-height: 150px; transition: transform 0.2s ease, box-shadow 0.2s ease; border: 1px solid rgba(255,255,255,0.6); }
+        .content-card:hover { transform: translateY(-4px); box-shadow: 0 10px 22px rgba(140, 122, 230, 0.18); }
 
         .table-container { width: 100%; overflow-x: auto; }
         table { width: 100%; border-collapse: collapse; }
-        th { background: var(--card-bg); padding: 15px; text-align: left; font-weight: 600; border-bottom: 2px solid #e0e0e0; }
-        td { padding: 15px; border-bottom: 1px solid #f0f0f0; }
-        tr:hover { background: #fafafa; }
+        th { background: var(--card-bg); padding: 15px; text-align: left; font-weight: 700; color: var(--text-dark); border-bottom: 2px solid #E6E0F7; }
+        td { padding: 15px; border-bottom: 1px solid #F2EEFA; }
+        tr:hover { background: #FAF8FF; }
 
-        .badge { display: inline-block; padding: 6px 14px; border-radius: 20px; font-size: 0.85rem; font-weight: 600; }
-        .badge-p1 { background: #FFE8E8; color: #FF69B4; }
-        .badge-p2 { background: #E6E6FA; color: #6B5B95; }
-        .badge-p3 { background: #E0F7F6; color: #2E7D7D; }
-        .badge-p4 { background: #FFF4E6; color: #FF8C42; }
-        .badge-p5 { background: #E8F4E8; color: #27AE60; }
-        .badge-p6 { background: #F0E8F7; color: #8E44AD; }
+        .badge { display: inline-block; padding: 6px 14px; border-radius: 20px; font-size: 0.85rem; font-weight: 700; }
+        .badge-p1 { background: #FFE3EE; color: #E85D9C; }
+        .badge-p2 { background: #EFE9FC; color: #8C7AE6; }
+        .badge-p3 { background: #E0F4F7; color: #2E9DA8; }
+        .badge-p4 { background: #FFF1DE; color: #F5A623; }
+        .badge-p5 { background: #E4F7EC; color: #34B768; }
+        .badge-p6 { background: #F2E7FB; color: #9B59D8; }
 
-        .btn { padding: 10px 25px; background: #FF69B4; color: white; border: none; border-radius: 20px; cursor: pointer; font-weight: 600; margin: 5px; pointer-events: auto; }
-        .btn:hover { opacity: 0.9; }
-        .btn-secondary { background: #87CEEB; }
-        .btn-danger { background: #FF6B6B; }
+        .btn { padding: 10px 25px; background: var(--primary); color: white; border: none; border-radius: 20px; cursor: pointer; font-weight: 700; margin: 5px; pointer-events: auto; box-shadow: 0 4px 12px rgba(140, 122, 230, 0.25); }
+        .btn:hover { opacity: 0.92; transform: translateY(-1px); }
+        .btn-secondary { background: var(--accent-blue); color: #1D5C77; }
+        .btn-danger { background: var(--accent-coral); }
         .btn-small { padding: 6px 12px; font-size: 0.85rem; }
 
-        .modal { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); justify-content: center; align-items: center; z-index: 1000; }
+        .modal { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(66, 62, 91, 0.45); justify-content: center; align-items: center; z-index: 1000; }
         .modal.show { display: flex; }
-        .modal-content { background: white; padding: 40px; border-radius: 20px; max-width: 500px; width: 90%; }
+        .modal-content { background: white; padding: 40px; border-radius: 24px; max-width: 500px; width: 90%; }
         .close-btn { float: right; font-size: 2rem; cursor: pointer; color: #999; }
 
         .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 20px; }
-        .card { background: var(--card-bg); padding: 25px; border-radius: 20px; text-align: center; box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
+        .card { background: var(--card-bg); padding: 25px; border-radius: 22px; text-align: center; box-shadow: 0 4px 16px rgba(140, 122, 230, 0.1); }
         .card h3 { margin: 15px 0; color: var(--text-dark); }
         .card-icon { font-size: 3rem; margin-bottom: 10px; }
 
-        .text-area { margin-bottom: 20px; min-height: 200px; padding: 20px; background: linear-gradient(135deg, var(--card-bg) 0%, #E8E8FF 100%); border-radius: 20px; line-height: 2; font-size: 1.3rem; text-align: center; }
+        .text-area { margin-bottom: 20px; min-height: 200px; padding: 20px; background: linear-gradient(135deg, var(--card-bg) 0%, #F5F0FF 100%); border-radius: 22px; line-height: 2; font-size: 1.3rem; text-align: center; }
         .text-char { display: inline-block; padding: 4px 6px; margin: 2px; border-radius: 8px; cursor: pointer; transition: all 0.2s; }
-        .text-char:hover { background: rgba(255, 105, 180, 0.3); transform: scale(1.1); }
-        .text-char.highlight { background: linear-gradient(45deg, #FFB6D9, #FF69B4); color: white; font-weight: bold; box-shadow: 0 0 15px rgba(255,105,180,0.6); }
+        .text-char:hover { background: rgba(140, 122, 230, 0.25); transform: scale(1.1); }
+        .text-char.highlight { background: linear-gradient(45deg, #B8A6F5, var(--primary)); color: white; font-weight: bold; box-shadow: 0 0 15px rgba(140,122,230,0.5); }
 
-        .form-section { background: white; padding: 20px; border-radius: 20px; max-width: 600px; margin: 0 auto 20px auto; box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
-        select { width: 100%; padding: 12px; border: 2px solid #e0e0e0; border-radius: 12px; font-size: 1rem; background: white; cursor: pointer; }
-        select:focus { outline: none; border-color: #FF69B4; }
+        .form-section { background: white; padding: 20px; border-radius: 22px; max-width: 600px; margin: 0 auto 20px auto; box-shadow: 0 4px 16px rgba(140, 122, 230, 0.1); }
+        select { width: 100%; padding: 12px; border: 2px solid #E6E0F7; border-radius: 14px; font-size: 1rem; background: white; cursor: pointer; font-family: inherit; }
+        select:focus { outline: none; border-color: var(--primary); }
 
-        .welcome-header { font-size: 1.8rem; margin-bottom: 30px; color: var(--text-dark); }
+        .welcome-header { font-size: 1.8rem; margin-bottom: 30px; color: var(--text-dark); font-weight: 700; }
 
         .activity-feed { max-width: 800px; }
-        .activity-item { background: white; padding: 15px 20px; border-radius: 12px; margin-bottom: 12px; border-left: 4px solid #FF69B4; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
+        .activity-item { background: white; padding: 15px 20px; border-radius: 14px; margin-bottom: 12px; border-left: 4px solid var(--primary); box-shadow: 0 2px 10px rgba(140, 122, 230, 0.08); }
         .activity-time { font-size: 0.85rem; color: var(--text-light); margin-top: 5px; }
 
         .passages-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 20px; margin-bottom: 30px; }
-        .passage-card { background: linear-gradient(180deg, #ffffff 0%, var(--card-bg) 100%); padding: 20px; border-radius: 18px; cursor: pointer; transition: all 0.3s ease; box-shadow: 0 2px 10px rgba(0,0,0,0.05); border: 1px solid rgba(255,255,255,0.55); position: relative; overflow: hidden; }
-        .passage-card::before { content: ''; position: absolute; inset: 0; background: linear-gradient(135deg, rgba(255,105,180,0.08), rgba(135,206,235,0.08)); opacity: 0; transition: opacity 0.3s ease; }
-        .passage-card:hover { transform: translateY(-6px); box-shadow: 0 10px 24px rgba(0,0,0,0.12); }
+        .passage-card { background: linear-gradient(180deg, #ffffff 0%, var(--card-bg) 100%); padding: 20px; border-radius: 20px; cursor: pointer; transition: all 0.3s ease; box-shadow: 0 2px 10px rgba(140, 122, 230, 0.08); border: 1px solid rgba(255,255,255,0.7); position: relative; overflow: hidden; }
+        .passage-card::before { content: ''; position: absolute; inset: 0; background: linear-gradient(135deg, rgba(140,122,230,0.08), rgba(143,207,234,0.08)); opacity: 0; transition: opacity 0.3s ease; }
+        .passage-card:hover { transform: translateY(-6px); box-shadow: 0 10px 24px rgba(140, 122, 230, 0.16); }
         .passage-card:hover::before { opacity: 1; }
-        .passage-card.playing { box-shadow: 0 14px 28px rgba(255, 105, 180, 0.18); border-color: rgba(255,105,180,0.25); }
+        .passage-card.playing { box-shadow: 0 14px 28px rgba(140, 122, 230, 0.22); border-color: rgba(140,122,230,0.3); }
         .passage-title-row { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; margin-bottom: 10px; position: relative; z-index: 1; }
         .passage-title { font-size: 1.08rem; font-weight: 700; color: var(--text-dark); line-height: 1.35; }
         .passage-preview { font-size: 0.92rem; color: var(--text-light); line-height: 1.55; margin-bottom: 14px; position: relative; z-index: 1; }
-        .passage-meta { font-size: 0.84rem; color: #FF69B4; display: flex; gap: 8px; align-items: center; flex-wrap: wrap; position: relative; z-index: 1; }
-        .passage-level-pill { display: inline-flex; align-items: center; padding: 5px 10px; border-radius: 999px; background: rgba(255,105,180,0.12); color: #FF69B4; font-weight: 700; }
+        .passage-meta { font-size: 0.84rem; color: var(--primary); display: flex; gap: 8px; align-items: center; flex-wrap: wrap; position: relative; z-index: 1; }
+        .passage-level-pill { display: inline-flex; align-items: center; padding: 5px 10px; border-radius: 999px; background: rgba(140,122,230,0.12); color: var(--primary); font-weight: 700; }
         .passage-audio-controls { display: flex; gap: 8px; flex-shrink: 0; position: relative; z-index: 1; }
-        .audio-icon-btn { width: 34px; height: 34px; border: none; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; cursor: pointer; font-size: 0.95rem; box-shadow: 0 4px 10px rgba(0,0,0,0.08); transition: transform 0.2s ease, box-shadow 0.2s ease, opacity 0.2s ease; }
-        .audio-icon-btn:hover { transform: translateY(-1px) scale(1.03); box-shadow: 0 8px 14px rgba(0,0,0,0.12); }
+        .audio-icon-btn { width: 34px; height: 34px; border: none; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; cursor: pointer; font-size: 0.95rem; box-shadow: 0 4px 10px rgba(140,122,230,0.12); transition: transform 0.2s ease, box-shadow 0.2s ease, opacity 0.2s ease; }
+        .audio-icon-btn:hover { transform: translateY(-1px) scale(1.03); box-shadow: 0 8px 14px rgba(140,122,230,0.18); }
         .audio-icon-btn:active { transform: scale(0.97); }
-        .audio-play { background: linear-gradient(135deg, #FF69B4 0%, #FF8FB7 100%); color: white; }
-        .audio-pause { background: linear-gradient(135deg, #87CEEB 0%, #5BB3DF 100%); color: white; }
-        .audio-stop { background: linear-gradient(135deg, #FF8A80 0%, #FF6B6B 100%); color: white; }
-        .passage-empty { background: rgba(255,255,255,0.76); border: 1px dashed rgba(255,105,180,0.25); border-radius: 20px; padding: 28px; text-align: center; color: var(--text-light); box-shadow: 0 2px 10px rgba(0,0,0,0.04); }
+        .audio-play { background: linear-gradient(135deg, var(--primary) 0%, #A493EE 100%); color: white; }
+        .audio-pause { background: linear-gradient(135deg, var(--accent-blue) 0%, #6FBADB 100%); color: white; }
+        .audio-stop { background: linear-gradient(135deg, var(--accent-coral) 0%, #FF8066 100%); color: white; }
+        .passage-empty { background: rgba(255,255,255,0.76); border: 1px dashed rgba(140,122,230,0.3); border-radius: 20px; padding: 28px; text-align: center; color: var(--text-light); box-shadow: 0 2px 10px rgba(140,122,230,0.05); }
         .passage-empty strong { display: block; color: var(--text-dark); font-size: 1.05rem; margin-bottom: 8px; }
 
         .reading-view { max-width: 900px; }
-        .reading-shell { background: rgba(255,255,255,0.78); border: 1px solid rgba(255,255,255,0.5); border-radius: 24px; padding: 22px; box-shadow: 0 14px 30px rgba(0,0,0,0.08); backdrop-filter: blur(10px); }
+        .reading-shell { background: rgba(255,255,255,0.82); border: 1px solid rgba(255,255,255,0.6); border-radius: 26px; padding: 22px; box-shadow: 0 14px 30px rgba(140,122,230,0.12); backdrop-filter: blur(10px); }
         .reading-hero { display: flex; justify-content: space-between; gap: 16px; flex-wrap: wrap; align-items: flex-start; margin-bottom: 18px; }
-        .reading-eyebrow { display: inline-flex; align-items: center; padding: 6px 12px; border-radius: 999px; background: rgba(135,206,235,0.16); color: #3B7EA1; font-weight: 700; margin-bottom: 10px; }
+        .reading-eyebrow { display: inline-flex; align-items: center; padding: 6px 12px; border-radius: 999px; background: rgba(143,207,234,0.22); color: #2D7A9C; font-weight: 700; margin-bottom: 10px; }
         .reading-title { font-size: 1.55rem; margin-bottom: 8px; color: var(--text-dark); line-height: 1.3; }
         .reading-subtitle { font-size: 0.95rem; color: var(--text-light); }
         .reading-controls { display: flex; gap: 10px; margin-bottom: 0; flex-wrap: wrap; }
         .reading-controls .btn { min-width: 90px; }
         .passage-images { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 14px; margin-bottom: 18px; }
-        .passage-image-card { background: rgba(255,255,255,0.9); border: 1px solid rgba(255,105,180,0.1); border-radius: 18px; overflow: hidden; box-shadow: 0 8px 18px rgba(0,0,0,0.06); }
+        .passage-image-card { background: rgba(255,255,255,0.9); border: 1px solid rgba(140,122,230,0.12); border-radius: 18px; overflow: hidden; box-shadow: 0 8px 18px rgba(140,122,230,0.08); }
         .passage-image-card img { display: block; width: 100%; height: auto; aspect-ratio: 3 / 4; object-fit: cover; background: #f4f4f4; }
-        .passage-image-label { padding: 10px 12px; font-size: 0.9rem; font-weight: 700; color: #FF69B4; background: rgba(255,105,180,0.06); }
+        .passage-image-label { padding: 10px 12px; font-size: 0.9rem; font-weight: 700; color: var(--primary); background: rgba(140,122,230,0.07); }
         .teacher-passages-toolbar { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; margin: 10px 0 22px; }
         .teacher-passages-toolbar select { max-width: 220px; }
         .teacher-students-toolbar { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
         .teacher-students-toolbar input { max-width: 260px; }
-        .student-name-link { background: none; border: none; color: #FF69B4; font-weight: 700; cursor: pointer; padding: 0; text-align: left; }
+        .student-name-link { background: none; border: none; color: var(--primary); font-weight: 700; cursor: pointer; padding: 0; text-align: left; }
         .student-name-link:hover { text-decoration: underline; }
-        .section-card { background: rgba(255,255,255,0.72); border: 1px solid rgba(0,0,0,0.04); border-radius: 18px; padding: 20px; box-shadow: 0 10px 22px rgba(0,0,0,0.05); }
+        .section-card { background: rgba(255,255,255,0.78); border: 1px solid rgba(140,122,230,0.06); border-radius: 20px; padding: 20px; box-shadow: 0 10px 22px rgba(140,122,230,0.07); }
         .section-heading { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 16px; }
         .table-actions { display: flex; gap: 8px; flex-wrap: wrap; }
-        .btn-ghost { background: white; color: #FF69B4; border: 2px solid #FF69B4; }
+        .btn-ghost { background: white; color: var(--primary); border: 2px solid var(--primary); }
         .btn-ghost:hover { opacity: 0.92; }
         .btn-edit { background: white; color: #d97706; border: 2px solid #f59e0b; }
         .btn-edit:hover { opacity: 0.92; }
         .flashcard-inner { position: relative; width: 100%; aspect-ratio: 1; transition: transform 0.6s; transform-style: preserve-3d; }
         .flashcard-inner.flipped { transform: rotateY(180deg); }
-        .flashcard-front, .flashcard-back { position: absolute; width: 100%; height: 100%; backface-visibility: hidden; display: flex; flex-direction: column; justify-content: center; align-items: center; border-radius: 15px; padding: 30px; }
-        .flashcard-front { background: linear-gradient(135deg, #FFB6D9 0%, #FF69B4 100%); color: white; }
-        .flashcard-back { background: linear-gradient(135deg, #87CEEB 0%, #5B9BD5 100%); color: white; transform: rotateY(180deg); }
+        .flashcard-front, .flashcard-back { position: absolute; width: 100%; height: 100%; backface-visibility: hidden; display: flex; flex-direction: column; justify-content: center; align-items: center; border-radius: 18px; padding: 30px; }
+        .flashcard-front { background: linear-gradient(135deg, #B8A6F5 0%, var(--primary) 100%); color: white; }
+        .flashcard-back { background: linear-gradient(135deg, var(--accent-blue) 0%, #5B9BD5 100%); color: white; transform: rotateY(180deg); }
         .flashcard-char { font-size: 4rem; font-weight: bold; margin: 20px 0; }
         .flashcard-meaning { font-size: 1.5rem; margin: 10px 0; }
         .flashcard-pinyin { font-size: 1.2rem; opacity: 0.9; }
@@ -171,12 +188,29 @@
         .spelling-controls { display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap; }
         .spelling-title { font-size: 1.5rem; margin-bottom: 20px; color: var(--text-dark); }
         .spelling-list { list-style: none; }
-        .spelling-item { background: white; padding: 15px 20px; margin-bottom: 12px; border-radius: 12px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
-        .spelling-text { font-size: 1.1rem; font-weight: 500; color: var(--text-dark); flex: 1; }
-        .spelling-btn { padding: 8px 16px; background: #FF69B4; color: white; border: none; border-radius: 20px; cursor: pointer; font-weight: 600; font-size: 0.9rem; }
+        .spelling-item { background: white; padding: 15px 20px; margin-bottom: 12px; border-radius: 14px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 8px rgba(140,122,230,0.08); }
+        .spelling-text { font-size: 1.1rem; font-weight: 600; color: var(--text-dark); flex: 1; }
+        .spelling-btn { padding: 8px 16px; background: var(--primary); color: white; border: none; border-radius: 20px; cursor: pointer; font-weight: 700; font-size: 0.9rem; }
         .spelling-btn:hover { opacity: 0.9; }
 
         .student-level-badge { display: inline-flex; align-items: center; gap: 6px; margin-left: 12px; padding: 6px 12px; border-radius: 999px; background: rgba(255,255,255,0.2); color: white; border: 1px solid rgba(255,255,255,0.3); font-size: 0.8rem; font-weight: 700; }
+
+        /* Welcome banner */
+        .welcome-banner { position: relative; background: linear-gradient(120deg, #A493EE 0%, #8FCFEA 100%); border-radius: 28px; padding: 38px 40px; margin-bottom: 30px; overflow: hidden; color: white; box-shadow: 0 16px 32px rgba(140,122,230,0.25); }
+        .welcome-banner-inner { position: relative; z-index: 2; max-width: 560px; }
+        .welcome-banner-eyebrow { display: inline-flex; align-items: center; gap: 6px; background: rgba(255,255,255,0.22); padding: 6px 14px; border-radius: 999px; font-size: 0.85rem; font-weight: 700; margin-bottom: 14px; }
+        .welcome-banner h1 { font-size: 2rem; margin-bottom: 10px; line-height: 1.25; color: white; }
+        .welcome-banner p { font-size: 1rem; opacity: 0.92; line-height: 1.5; margin-bottom: 18px; max-width: 440px; }
+        .welcome-banner .btn { background: white; color: var(--primary-dark); box-shadow: 0 6px 16px rgba(0,0,0,0.12); }
+        .welcome-banner .btn:hover { transform: translateY(-2px); }
+        .banner-blob { position: absolute; border-radius: 50%; opacity: 0.35; }
+        .banner-blob-1 { width: 180px; height: 180px; background: #FFD27F; top: -60px; right: 60px; }
+        .banner-blob-2 { width: 110px; height: 110px; background: #FF9EC4; bottom: -40px; right: 180px; opacity: 0.4; }
+        .banner-emoji { position: absolute; font-size: 4.5rem; right: 50px; top: 50%; transform: translateY(-50%); filter: drop-shadow(0 8px 14px rgba(0,0,0,0.15)); z-index: 1; }
+        @media (max-width: 768px) {
+            .welcome-banner { padding: 28px; }
+            .banner-emoji { display: none; }
+        }
 
         @media (max-width: 768px) {
             .passages-grid { grid-template-columns: 1fr; }
@@ -193,8 +227,8 @@
 <!-- LOGIN PAGE -->
 <div id="loginPage" class="login-page">
     <div class="login-box">
-        <h1>🌟 中文平台</h1>
-        <p>Chinese Tuition Platform</p>
+        <h1>🌟 陈风华文</h1>
+        <p>Chinese Tuition E-learning</p>
         <div id="loginMessage" class="message"></div>
         <form onsubmit="handleLogin(event)">
             <div class="form-group">
@@ -231,26 +265,44 @@
 
         <!-- TEACHER HOME PAGE -->
         <div id="teacherHomePage" class="view-section">
-            <h1 class="welcome-header">Welcome back, <span id="teacherName">Teacher</span>!</h1>
+            <div class="welcome-banner">
+                <div class="banner-blob banner-blob-1"></div>
+                <div class="banner-blob banner-blob-2"></div>
+                <span class="banner-emoji">📚</span>
+                <div class="welcome-banner-inner">
+                    <span class="welcome-banner-eyebrow">✨ Teacher Space</span>
+                    <h1>Welcome back, <span id="teacherName">Teacher</span>!</h1>
+                    <p>Here's what your students have been up to. Keep up the great work guiding their Chinese learning journey!</p>
+                </div>
+            </div>
             <div class="activity-feed" id="activityFeed"></div>
         </div>
 
         <!-- STUDENT HOME PAGE -->
         <div id="studentHomePage" class="view-section">
-            <h1 class="welcome-header">Welcome, <span id="studentName">Student</span>!</h1>
+            <div class="welcome-banner">
+                <div class="banner-blob banner-blob-1"></div>
+                <div class="banner-blob banner-blob-2"></div>
+                <span class="banner-emoji">🌟</span>
+                <div class="welcome-banner-inner">
+                    <span class="welcome-banner-eyebrow">👋 Ni Hao</span>
+                    <h1>Welcome, <span id="studentName">Student</span>!</h1>
+                    <p>Ready for today's Chinese adventure? Pick a passage to read, practice your spelling, or flip through some flashcards!</p>
+                </div>
+            </div>
             <div class="content-grid">
                 <div class="content-cards">
                     <div class="content-card" onclick="goToModule('flashcards')" style="cursor: pointer;">
                         <div style="font-size: 3rem; margin-bottom: 10px;">🎴</div>
                         <h3>Flashcards</h3>
                     </div>
-                    <div class="content-card" onclick="goToModule('quiz')" style="cursor: pointer;">
-                        <div style="font-size: 3rem; margin-bottom: 10px;">📝</div>
-                        <h3>Quizzes</h3>
+                    <div class="content-card" onclick="handleMenuClick('Passages')" style="cursor: pointer;">
+                        <div style="font-size: 3rem; margin-bottom: 10px;">📖</div>
+                        <h3>Passages</h3>
                     </div>
-                    <div class="content-card" onclick="goToModule('games')" style="cursor: pointer;">
-                        <div style="font-size: 3rem; margin-bottom: 10px;">🎮</div>
-                        <h3>Mini Games</h3>
+                    <div class="content-card" onclick="handleMenuClick('Spelling')" style="cursor: pointer;">
+                        <div style="font-size: 3rem; margin-bottom: 10px;">✏️</div>
+                        <h3>Spelling</h3>
                     </div>
                 </div>
                 <div class="section-card">
@@ -280,7 +332,7 @@
                 <div class="table-container">
                     <table>
                         <thead>
-                            <tr><th>Name</th><th>Level</th><th>Listens</th><th>Quizzes</th><th>Avg</th><th>Action</th></tr>
+                            <tr><th>Name</th><th>Level</th><th>Action</th></tr>
                         </thead>
                         <tbody id="studentsTable"></tbody>
                     </table>
@@ -426,14 +478,6 @@
                         <button class="btn btn-small" onclick="nextCard()">Next ➡️</button>
                     </div>
                 </div>
-            </div>
-            <div id="quizModule" class="tab-content" style="display:none;">
-                <h2>📝 Quizzes</h2>
-                <div id="quizContent"></div>
-            </div>
-            <div id="gamesModule" class="tab-content" style="display:none;">
-                <h2>🎮 Mini Games</h2>
-                <div id="gameContent"></div>
             </div>
         </div>
     </div>
@@ -619,7 +663,63 @@
                 { label: "P6B （第十课) Pg 52,53,54", file: "P6B (第十课) Pg 52,53,54.mpeg" }
             ],
             date: "2026-05-30"
-        }
+        },
+        {
+            id: 7,
+            level: "P3",
+            title: "第一课(深广，高华)",
+            preview: "P3B高华.深广（第一课） Pg 11,12,13",
+            text: "P3B高华.深广（第一课） Pg 11,12,13",
+            audio: "P3B 高华，深广（第一课）墙壁上的画.mpeg",
+            pages: "11,12,13",
+            imageFolder: "Image",
+            audioFolder: "Audio",
+            images: [
+                { page: 11, file: "P3B 高华，深广（第一课）墙壁上的画 Pg11.jpeg" },
+                { page: 12, file: "P3B 高华，深广（第一课）墙壁上的画 Pg12.jpeg" },
+                { page: 13, file: "P3B 高华，深广（第一课）墙壁上的画 Pg13.jpeg" }
+            ],
+            date: "2026-06-19"
+        },
+        {
+            id: 8,
+            level: "P3",
+            title: "第一课(深广，普华)",
+            preview: "P3B普华.深广（第一课） Pg 11,12,13",
+            text: "P3B普华.深广（第一课） Pg 11,12,13",
+            audio: "P3B 普华，深广（第一课）电梯的话.mpeg",
+            pages: "11,12,13",
+            imageFolder: "Image",
+            audioFolder: "Audio",
+            images: [
+                { page: 11, file: "P3B 普华，深广（第一课）电梯的话 Pg11.jpeg" },
+                { page: 12, file: "P3B 普华，深广（第一课）电梯的话 Pg12.jpeg" },
+                { page: 13, file: "P3B 普华，深广（第一课）电梯的话 Pg13.jpeg" }
+            ],
+            date: "2026-06-19"
+        },
+        {
+            id: 9,
+            level: "P3",
+            title: "P3B 第二课",
+            preview: "P3B （第二课）Pg17,18/ Pg21,22",
+            text: "Pg 17,18 系统里不会辨别多音字，我们朗读的时候稍微自己改过来“刹”shā不读“刹” chà",
+            pages: "17,18,21,22",
+            imageFolder: "Image",
+            audioFolder: "Audio",
+            images: [
+                { page: 17, file: "P3B 普华（第二课）pg17.jpeg" },
+                { page: 18, file: "P3B 普华（第二课）pg18.jpeg" },
+                { page: 21, file: "P3B 普华（第二课）pg21.jpeg" },
+                { page: 22, file: "P3B 普华（第二课）pg22.jpeg" }
+            ],
+            audioTracks: [
+                { label: "P3B 普华（第二课）pg17,18.mpeg", file: "P3B 普华（第二课）pg17,18.mpeg" },
+                { label: "P3B 普华（第二课）pg21，22.mpeg", file: "P3B 普华（第二课）pg21，22.mpeg" }
+            ],
+            date: "2026-06-19"
+        },
+        
     ];
 
     const spellingLessons = [
@@ -834,13 +934,14 @@
 
         // No Wallet item for either role
         const menuItems = currentUser.role === 'teacher'
-            ? ['Home', 'Students', 'Passages', 'Flashcards', 'Spelling', 'Mini Games']
+            ? ['Home', 'Students', 'Passages', 'Flashcards', 'Spelling']
             : ['Home', 'Passages', 'Spelling'];
 
         menuItems.forEach(item => {
             const div = document.createElement('div');
             div.className = 'menu-item' + (item === 'Home' ? ' active' : '');
             div.textContent = item;
+            div.dataset.menuItem = item;
             div.onclick = (e) => handleMenuClick(item, e);
             menu.appendChild(div);
         });
@@ -848,7 +949,8 @@
 
     function handleMenuClick(item, e) {
         document.querySelectorAll('.menu-item').forEach(m => m.classList.remove('active'));
-        if (e && e.target) e.target.classList.add('active');
+        const targetEl = (e && e.target) || document.querySelector(`.menu-item[data-menu-item="${item}"]`);
+        if (targetEl) targetEl.classList.add('active');
 
         if (item === 'Home') showView('HOME', currentUser.role);
         else if (item === 'Students') showView('STUDENTS', 'teacher');
@@ -856,7 +958,6 @@
         else if (item === 'Passages') showView('PASSAGES', 'student');
         else if (item === 'Spelling') showView('SPELLING', currentUser.role);
         else if (item === 'Flashcards') goToModule('flashcards');
-        else if (item === 'Mini Games') goToModule('games');
     }
 
     async function showView(view, role) {
@@ -915,8 +1016,6 @@
         document.querySelectorAll('#modulesView .tab-content').forEach(c => c.style.display = 'none');
 
         if (module === 'flashcards') document.getElementById('flashcardsModule').style.display = 'block';
-        else if (module === 'quiz') document.getElementById('quizModule').style.display = 'block';
-        else if (module === 'games') document.getElementById('gamesModule').style.display = 'block';
     }
 
     // =====================================================
@@ -998,12 +1097,6 @@
 
         const activities = Progress.getAllStudentActivities();
         const feedHtml = activities.map(activity => {
-            if (activity.activityType === 'Quiz' || activity.activityType === 'Game') {
-                return `<div class="activity-item">
-                    <strong>${activity.studentName}</strong> scored ${activity.score}% on ${activity.activityType}
-                    <div class="activity-time">${new Date(activity.date).toLocaleString()}</div>
-                </div>`;
-            }
             if (activity.isAttempt) {
                 return `<div class="activity-item">
                     <strong>${activity.studentName}</strong> started ${activity.activityType} - ${activity.title}
@@ -1041,19 +1134,11 @@
         );
 
         if (filteredStudents.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; color: var(--text-light);">No students found</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="3" style="text-align:center; color: var(--text-light);">No students found</td></tr>';
             return;
         }
 
-        // Pre-load progress for all students in parallel (for history data)
-        await Promise.all(filteredStudents.map(s => Progress.fetchStudentProgress(s.id)));
-
-        // For each student, fetch FRESH listening count from Firebase (no cache)
         for (const s of filteredStudents) {
-            const history = Progress.getStudentPracticeHistory(s.id);
-            // ALWAYS get fresh count from Firestore, not from cache
-            const freshListenCount = await Progress.getListeningCountFromFirebase(s.id);
-            const stats = Progress.getStudentStats(s.id);
             const badge = 'badge-' + s.level.toLowerCase();
 
             const row = document.createElement('tr');
@@ -1061,9 +1146,6 @@
             row.innerHTML = `
                 <td><button class="student-name-link" onclick="openStudentHistory('${s.id}')">${s.name}</button></td>
                 <td><span class="badge ${badge}">${s.level}</span></td>
-                <td class="listen-count-cell"><strong>${freshListenCount}</strong></td>
-                <td>${stats.totalQuizzes}</td>
-                <td>${stats.averageQuizScore}%</td>
                 <td>
                     <div class="table-actions">
                         <button class="btn btn-small btn-edit" onclick="openEditStudentModal('${s.id}')">✏️ Edit</button>
@@ -1173,7 +1255,7 @@
                                 <div style="color: var(--text-light);">Level ${group.level}</div>
                             </div>
                             <div style="text-align:right;">
-                                <div style="font-size:1.4rem; font-weight:700; color:#FF69B4;">${group.count}x</div>
+                                <div style="font-size:1.4rem; font-weight:700; color:var(--primary);">${group.count}x</div>
                                 <div style="color: var(--text-light); font-size:0.9rem;">Last: ${lastPlayed}</div>
                             </div>
                         </div>
@@ -1191,7 +1273,7 @@
                         <div style="color: var(--text-light);">${student.level} • ${student.role}</div>
                     </div>
                     <div style="text-align:right;">
-                        <div style="font-size:1.2rem; font-weight:700; color:#FF69B4;">${historyData.rawRecords.length} total listens</div>
+                        <div style="font-size:1.2rem; font-weight:700; color:var(--primary);">${historyData.rawRecords.length} total listens</div>
                     </div>
                 </div>
             </div>
@@ -1487,7 +1569,7 @@
 
         container.innerHTML = levels.map((level, index) => `
             <button class="btn" data-spelling-level="${level}" onclick="showSpellingLevel('${level}')"
-                style="background: ${index === 0 ? '#FFE8E8' : 'white'}; color: #FF69B4; border: 2px solid #FF69B4;">
+                style="background: ${index === 0 ? '#F1ECFB' : 'white'}; color: var(--primary); border: 2px solid var(--primary);">
                 ${level}
             </button>
         `).join('');
@@ -1497,7 +1579,7 @@
         currentSpellingLevel = level;
 
         document.querySelectorAll('[data-spelling-level]').forEach(btn => {
-            btn.style.background = btn.dataset.spellingLevel === level ? '#FFE8E8' : 'white';
+            btn.style.background = btn.dataset.spellingLevel === level ? '#F1ECFB' : 'white';
         });
 
         const emptyState = document.getElementById('spellingEmptyState');

@@ -331,76 +331,33 @@
          * Record a practice attempt (student pressed Play from the beginning).
          * type = 'attempt', completed = false
          */
-        async recordPracticeAttempt(userId, practiceKind, title, level) {
-            try {
-                await waitForFirebase();
-                const rec = {
-                    id: uid(),
-                    userId,
-                    type: 'attempt',
-                    completed: false,
-                    practiceKind,   // 'passage' | 'spelling'
-                    title,
-                    level,
-                    date: nowISO()
-                };
-                await fsSetDoc(fsDoc('progressRecords', rec.id), rec);
-            } catch (err) {
-                console.error('recordPracticeAttempt error', err);
-            }
-        },
+            async recordPracticeAttempt() {
+        return true;
+    },
 
         /**
          * Record a practice completion (audio finished playing naturally).
          * type = 'practice', completed = true
          */
-        async recordPracticeCompletion(userId, practiceKind, title, level) {
-            try {
-                await waitForFirebase();
-                const rec = {
-                    id: uid(),
-                    userId,
-                    type: 'practice',
-                    completed: true,
-                    practiceKind,
-                    title,
-                    level,
-                    date: nowISO()
-                };
-                await fsSetDoc(fsDoc('progressRecords', rec.id), rec);
-            } catch (err) {
-                console.error('recordPracticeCompletion error', err);
-            }
-        },
+            async recordPracticeCompletion() {
+    return true;
+    },
 
         /**
          * Fetch all progress records for a student from Firestore.
          * Returns array of record objects, sorted newest-first.
          */
-        async fetchStudentProgress(userId) {
-            try {
-                await waitForFirebase();
-                const snap = await fsGetDocs(
-                    fsQuery(fsCol('progressRecords'), fsWhere('userId', '==', userId))
-                );
-                const records = snap.docs.map(d => d.data());
-                records.sort((a, b) => new Date(b.date) - new Date(a.date));
-                // Cache for synchronous callers
-                Progress._cache[userId] = records;
-                return records;
-            } catch (err) {
-                console.error('fetchStudentProgress error', err);
-                return Progress._cache[userId] || [];
-            }
-        },
+            async fetchStudentProgress() {
+        return [];
+    },
 
         /**
          * Synchronous accessor — returns the last-fetched cache for a user.
          * Always call fetchStudentProgress() first if you need live data.
          */
-        getStudentProgress(userId) {
-            return Progress._cache[userId] || [];
-        },
+        getStudentProgress() {
+    return [];
+    },
 
         /**
          * Returns history data shaped for the teacher history modal:
@@ -408,37 +365,12 @@
          * rawRecords = completed practice records only
          * groupedRecords = de-duped groups with count + lastPlayedAt
          */
-        getStudentPracticeHistory(userId) {
-            const all = Progress._cache[userId] || [];
-            const rawRecords = all.filter(r => r.type === 'practice' && r.completed);
-
-            // Group by practiceKind + title + level
-            const groups = {};
-            rawRecords.forEach(r => {
-                const key = `${r.practiceKind}||${r.title}||${r.level}`;
-                if (!groups[key]) {
-                    groups[key] = {
-                        practiceKind: r.practiceKind,
-                        title: r.title,
-                        level: r.level,
-                        count: 0,
-                        lastPlayedAt: null,
-                        records: []
-                    };
-                }
-                groups[key].count++;
-                groups[key].records.push(r);
-                if (!groups[key].lastPlayedAt || r.date > groups[key].lastPlayedAt) {
-                    groups[key].lastPlayedAt = r.date;
-                }
-            });
-
-            const groupedRecords = Object.values(groups).sort(
-                (a, b) => new Date(b.lastPlayedAt) - new Date(a.lastPlayedAt)
-            );
-
-            return { rawRecords, groupedRecords };
-        },
+        getStudentPracticeHistory() {
+    return {
+        rawRecords: [],
+        groupedRecords: []
+    };
+},
 
         /**
          * Basic stats for teacher table (quiz data not yet implemented).
@@ -477,23 +409,9 @@
          * from Firestore (used for teacher dashboard listen count column).
          * ALWAYS fetches fresh from Firestore, no cache.
          */
-        async getListeningCountFromFirebase(userId) {
-            try {
-                await waitForFirebase();
-                const snap = await fsGetDocs(
-                    fsQuery(
-                        fsCol('progressRecords'),
-                        fsWhere('userId', '==', userId),
-                        fsWhere('completed', '==', true)
-                    )
-                );
-                console.log('Fetched listening count for user', userId, ':', snap.size);
-                return snap.size;
-            } catch (err) {
-                console.error('getListeningCountFromFirebase error', err);
-                return 0;
-            }
-        },
+        async getListeningCountFromFirebase() {
+    return 0;
+},
 
         /**
          * Clears all internal caches. Call this when you need fresh data.
@@ -534,10 +452,6 @@
 
             // Pre-load all students
             await Auth.refreshStudents();
-
-            // Pre-load all progress records for all students
-            const students = Auth.getStudents();
-            await Promise.all(students.map(s => Progress.fetchStudentProgress(s.id)));
 
             console.log('CloudStore.bootstrap complete');
             return true;
@@ -588,8 +502,6 @@
             if (!window.__FIREBASE_INIT_DONE) return false;
             try {
                 await Auth.refreshStudents();
-                const students = Auth.getStudents();
-                await Promise.all(students.map(s => Progress.fetchStudentProgress(s.id)));
 
                 // Also refresh the current user from Firestore
                 const currentUserJson = localStorage.getItem('currentUser');
