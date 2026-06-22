@@ -319,7 +319,7 @@
             <div class="section-card" style="margin-bottom:20px;">
                 <div class="teacher-students-toolbar">
                     <input type="text" id="teacherStudentSearch" placeholder="Search student name" oninput="updateTeacherStudentsList()">
-                    <span style="color: var(--text-light); margin-left:10px;">Click a student name to view practice history.</span>
+                    <span style="color: var(--text-light); margin-left:10px;"></span>
                 </div>
             </div>
             <div class="section-card" style="margin-bottom:20px;">
@@ -709,9 +709,29 @@
             ],
             audioTracks: [
                 { label: "P3B 普华（第十一课）pg17,18.mpeg", file: "P3B 普华（第十一课）pg17,18.mpeg" },
-                { label: "P3B 普华（第十一课）pg21，22.mpeg", file: "P3B 普华（第十一课）pg21，22.mpeg" }
+                { label: "P3B 普华（第十一课）pg21，22.mpeg", file: "P3B 普华（第十一课）pg21,22.mpeg" }
             ],
             date: "2026-06-19"
+        },
+        {
+            id: 10,
+            level: "P4",
+            title: "P4 第十一课",
+            preview: "P4 （第十一课）Pg20/ Pg22,23",
+            text: "Pg 20,22,23",
+            pages: "20,22,23",
+            imageFolder: "Image",
+            audioFolder: "Audio",
+            images: [
+                { page: 20, file: "P4B 普华（第十一课）pg 20.jpeg" },
+                { page: 22, file: "P4B （第十一课）普华 pg22.jpeg" },
+                { page: 23, file: "P4B （第十一课）普华 pg23.jpeg" }
+            ],
+            audioTracks: [
+                { label: "P4 第十一课 pg20.mpeg", file: "P4B 普华（第十一课）pg 20.mpeg" },
+                { label: "P4 第十一课 pg22，23.mpeg", file: "P4B （第十一课）普华 pg22,23.mpeg" }
+            ],
+            date: "2026-06-22"
         },
         
     ];
@@ -748,6 +768,14 @@
             text: 'Each word will be repeated 2 times, pause and write down the answer before continuing',
             audioFolder: 'Audio',
             audio: 'P6B 听写 (第十课).mpeg'
+        },
+        {
+            id: 5,
+            level: 'P3',
+            title: 'P3B 听写(第11课)',
+            text: 'Each word will be repeated 2 times, pause and write down the answer before continuing. 系统里不会辨别多音字，我们朗读的时候自己改过来“刹”shā不读“刹” chà',
+            audioFolder: 'Audio',
+            audio: 'P3B 第十一课 听写.mpeg'
         }
     ];
 
