@@ -147,6 +147,7 @@
         .audio-play { background: linear-gradient(135deg, var(--primary) 0%, #A493EE 100%); color: white; }
         .audio-pause { background: linear-gradient(135deg, var(--accent-blue) 0%, #6FBADB 100%); color: white; }
         .audio-stop { background: linear-gradient(135deg, var(--accent-coral) 0%, #FF8066 100%); color: white; }
+        .audio-rewind { background: linear-gradient(135deg, var(--accent-yellow) 0%, #FFE08C 100%); color: #7A5A00; }
         .passage-empty { background: rgba(255,255,255,0.76); border: 1px dashed rgba(140,122,230,0.3); border-radius: 20px; padding: 28px; text-align: center; color: var(--text-light); box-shadow: 0 2px 10px rgba(140,122,230,0.05); }
         .passage-empty strong { display: block; color: var(--text-dark); font-size: 1.05rem; margin-bottom: 8px; }
 
@@ -158,6 +159,10 @@
         .reading-subtitle { font-size: 0.95rem; color: var(--text-light); }
         .reading-controls { display: flex; gap: 10px; margin-bottom: 0; flex-wrap: wrap; }
         .reading-controls .btn { min-width: 90px; }
+        .audio-seeker { margin: 18px 0 20px; padding: 14px 16px; background: rgba(140,122,230,0.08); border: 1px solid rgba(140,122,230,0.1); border-radius: 18px; }
+        .audio-seeker input[type="range"] { width: 100%; margin: 0; accent-color: var(--primary); }
+        .audio-time-row { display: flex; justify-content: space-between; gap: 12px; margin-top: 8px; font-size: 0.88rem; color: var(--text-light); font-weight: 700; }
+        .audio-time-row span:last-child { text-align: right; }
         .passage-images { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 14px; margin-bottom: 18px; }
         .passage-image-card { background: rgba(255,255,255,0.9); border: 1px solid rgba(140,122,230,0.12); border-radius: 18px; overflow: hidden; box-shadow: 0 8px 18px rgba(140,122,230,0.08); }
         .passage-image-card img { display: block; width: 100%; height: auto; aspect-ratio: 3 / 4; object-fit: cover; background: #f4f4f4; }
@@ -409,6 +414,13 @@
                         <button class="btn btn-danger" onclick="stopPassage()">⛔ Stop</button>
                     </div>
                 </div>
+                <div class="audio-seeker">
+                    <input id="passageSeekBar" type="range" min="0" max="0" step="0.1" value="0" oninput="scrubPassageAudio(this.value)">
+                    <div class="audio-time-row">
+                        <span id="passageCurrentTime">0:00</span>
+                        <span id="passageDuration">0:00</span>
+                    </div>
+                </div>
                 <div id="passageAudioArea"></div>
                 <div id="passageImagesArea"></div>
                 <div id="readingTextArea" class="text-area"></div>
@@ -438,6 +450,13 @@
                         <button class="btn" onclick="playSpellingLesson()">🔊 Play</button>
                         <button class="btn" onclick="pauseSpellingLesson()">⏸️ Pause</button>
                         <button class="btn btn-danger" onclick="stopSpellingLesson()">⛔ Stop</button>
+                    </div>
+                </div>
+                <div class="audio-seeker">
+                    <input id="spellingSeekBar" type="range" min="0" max="0" step="0.1" value="0" oninput="scrubSpellingAudio(this.value)">
+                    <div class="audio-time-row">
+                        <span id="spellingCurrentTime">0:00</span>
+                        <span id="spellingDuration">0:00</span>
                     </div>
                 </div>
                 <div id="readingSpellingArea" class="text-area"></div>
@@ -824,7 +843,139 @@
             ],
             date: "2026-06-25"
         },
-        
+        {
+            id: 16,
+            level: "P6",
+            title: "P6A 普华（第二课）",
+            preview: "P6A 普华 （第二课）《祖孙情》Pg16,17/《倾斜的伞》Pg18,19",
+            text: "Pg 16,17,18,19",
+            pages: "16,17,18,19",
+            imageFolder: "Image",
+            audioFolder: "Audio",
+            images: [
+                { page: 16, file: "P6A 普华 （第二课） 《祖孙情》Pg16.jpeg" },
+                { page: 17, file: "P6A 普华 （第二课） 《祖孙情》Pg17.jpeg" },
+                { page: 18, file: "P6A普华 （第二课）《倾斜的伞》Pg18.jpeg" },
+                { page: 19, file: "P6A普华 （第二课）《倾斜的伞》Pg19.jpeg" }
+            ],
+            audioTracks: [
+                { label: "P6A 普华 （第二课） 《祖孙情》Pg16,17", file: "P6A 普华 （第二课） 《祖孙情》Pg16,17.mpeg" },
+                { label: "P6A普华 （第二课）《倾斜的伞》Pg18,19", file: "P6A普华 （第二课）《倾斜的伞》Pg18,19.mpeg" }
+            ],
+            date: "2026-07-6"
+        },
+        {
+            id: 17,
+            level: "P6",
+            title: "P6A普华 第三课",
+            preview: "P6 （第三课）《美食小侦探》Pg30,31/ 《说筷子》Pg32,33,34",
+            text: "Pg 30,31,32,33,34 注意⚠️多音字“夹”jiā",
+            pages: "30,31,32,33,34",
+            imageFolder: "Image",
+            audioFolder: "Audio",
+            images: [
+                { page: 30, file: "P6A普华 （第三课） 《美食小侦探》Pg30.jpeg" },
+                { page: 31, file: "P6A普华 （第三课） 《美食小侦探》Pg31.jpeg" },
+                { page: 32, file: "P6A普华 （第三课） 《说筷子》Pg32.jpeg" },
+                { page: 33, file: "P6A普华 （第三课） 《说筷子》Pg33.jpeg" },
+                { page: 34, file: "P6A普华 （第三课） 《说筷子》Pg34.jpeg" }
+            ],
+            audioTracks: [
+                { label: "P6A普华 （第三课） 《美食小侦探》Pg30,31", file: "P6A普华 （第三课） 《美食小侦探》Pg30,31.mpeg" },
+                { label: "P6A普华 （第三课） 《说筷子》Pg32,33,34", file: "P6A普华 （第三课） 《说筷子》Pg32,33,34.mpeg" }
+            ],
+            date: "2026-07-6"
+        },
+        {
+            id: 18,
+            level: "P6",
+            title: "P6A普华 第四课",
+            preview: "P6 （第四课）《宝贵的礼物》Pg44,45/ 《珍珠项链》Pg46,47,48",
+            text: "Pg44,45,46,47,48",
+            pages: "44,45,46,47,48",
+            imageFolder: "Image",
+            audioFolder: "Audio",
+            images: [
+                { page: 44, file: "P6A普华 （第四课） 《宝贵的礼物》Pg44.jpeg" },
+                { page: 45, file: "P6A普华 （第四课） 《宝贵的礼物》Pg45.jpeg" },
+                { page: 46, file: "P6A普华 （第四课） 《珍珠项链》Pg46.jpeg" },
+                { page: 47, file: "P6A普华 （第四课） 《珍珠项链》Pg47.jpeg" },
+                { page: 48, file: "P6A普华 （第四课） 《珍珠项链》Pg48.jpeg" }
+            ],
+            audioTracks: [
+                { label: "P6A普华 （第四课） 《宝贵的礼物》Pg44,45", file: "P6A普华 （第四课） 《宝贵的礼物》Pg44,45.mpeg" },
+                { label: "P6A普华 （第四课） 《珍珠项链》Pg46,47,48", file: "P6A普华 （第四课） 《珍珠项链》Pg46,47,48.mpeg" }
+            ],
+            date: "2026-07-6"
+        },
+        {
+            id: 19,
+            level: "P6",
+            title: "P6A高华 （第一课） 《石缝里的小花》",
+            preview: "P6A高华 （第一课） 《石缝里的小花》Pg4,5,6",
+            text: "P6A高华 （第一课） 《石缝里的小花》Pg4,5,6. 注意⚠️多音字“着急”zháo jí",
+            audio: "P6A高华 （第一课） 《石缝里的小花》Pg4,5,6.mpeg",
+            pages: "4,5,6",
+            imageFolder: "Image",
+            audioFolder: "Audio",
+            images: [
+                { page: 4, file: "P6A高华 （第一课） 《石缝里的小花》Pg4.jpeg" },
+                { page: 5, file: "P6A高华 （第一课） 《石缝里的小花》Pg5.jpeg" },
+                { page: 6, file: "P6A高华 （第一课） 《石缝里的小花》Pg6.jpeg" }
+            ],
+            date: "2026-07-6"
+        },
+        {
+            id: 20,
+            level: "P6",
+            title: "P6A高华 （第二课） 《倾斜的伞》",
+            preview: "P6A高华 （第二课） 《倾斜的伞》Pg18,19",
+            text: "P6A高华 （第二课） 《倾斜的伞》Pg18,19",
+            audio: "P6A高华 （第二课） 《倾斜的伞》Pg18,19.mpeg",
+            pages: "18,19",
+            imageFolder: "Image",
+            audioFolder: "Audio",
+            images: [
+                { page: 18, file: "P6A高华 （第二课） 《倾斜的伞》Pg18.jpeg" },
+                { page: 19, file: "P6A高华 （第二课） 《倾斜的伞》Pg19.jpeg" }
+            ],
+            date: "2026-07-6"
+        },
+        {
+            id: 21,
+            level: "P6",
+            title: "P6A高华 （第三课） 《说筷子》",
+            preview: "P6A高华 （第三课） 《说筷子》Pg34,35,36",
+            text: "P6A高华 （第三课） 《说筷子》Pg34,35,36",
+            audio: "P6A高华 （第三课） 《说筷子》Pg34,35,36.mpeg",
+            pages: "34,35,36",
+            imageFolder: "Image",
+            audioFolder: "Audio",
+            images: [
+                { page: 34, file: "P6A高华 （第三课） 《说筷子》Pg34.jpeg" },
+                { page: 35, file: "P6A高华 （第三课） 《说筷子》Pg35.jpeg" },
+                { page: 36, file: "P6A高华 （第三课） 《说筷子》Pg36.jpeg" }
+            ],
+            date: "2026-07-6"
+        },
+        {
+            id: 22,
+            level: "P6",
+            title: "P6A高华 （第四课） 《珍珠项链》",
+            preview: "P6A高华 （第四课） 《珍珠项链》Pg48,49,50",
+            text: "P6A高华 （第四课） 《珍珠项链》Pg48,49,50",
+            audio: "P6A高华 （第四课） 《珍珠项链》Pg48,49,50.mpeg",
+            pages: "48,49,50",
+            imageFolder: "Image",
+            audioFolder: "Audio",
+            images: [
+                { page: 48, file: "P6A高华 （第四课） 《珍珠项链》Pg48.jpeg" },
+                { page: 49, file: "P6A高华 （第四课） 《珍珠项链》Pg49.jpeg" },
+                { page: 50, file: "P6A高华 （第四课） 《珍珠项链》Pg50.jpeg" }
+            ],
+            date: "2026-07-6"
+        },
+
     ];
 
     const spellingLessons = [
@@ -1425,6 +1576,7 @@
                 <div class="passage-title-row">
                     <div class="passage-title">${p.title}</div>
                     <div class="passage-audio-controls">
+                            <button class="audio-icon-btn audio-rewind" title="Back 5 seconds" onclick="event.stopPropagation(); rewindPassageFromCard(${p.id}, 5)">⏪</button>
                         <button class="audio-icon-btn audio-play" title="Play" onclick="event.stopPropagation(); playPassageFromCard(${p.id}, 'student')">▶</button>
                         <button class="audio-icon-btn audio-pause" title="Pause" onclick="event.stopPropagation(); pausePassageFromCard(${p.id})">⏸</button>
                     </div>
@@ -1458,6 +1610,7 @@
                     <div class="passage-title-row">
                         <div class="passage-title">${p.title}</div>
                         <div class="passage-audio-controls">
+                            <button class="audio-icon-btn audio-rewind" title="Back 5 seconds" onclick="event.stopPropagation(); rewindPassageFromCard(${p.id}, 5)">⏪</button>
                             <button class="audio-icon-btn audio-play" title="Play" onclick="event.stopPropagation(); playPassageFromCard(${p.id}, 'teacher')">▶</button>
                             <button class="audio-icon-btn audio-pause" title="Pause" onclick="event.stopPropagation(); pausePassageFromCard(${p.id})">⏸</button>
                         </div>
@@ -1500,6 +1653,58 @@
         return `${folder}/${file}`;
     }
 
+    function formatAudioTime(seconds) {
+        if (!Number.isFinite(seconds) || seconds < 0) return '0:00';
+        const totalSeconds = Math.floor(seconds);
+        const minutes = Math.floor(totalSeconds / 60);
+        const remainingSeconds = String(totalSeconds % 60).padStart(2, '0');
+        return `${minutes}:${remainingSeconds}`;
+    }
+
+    function updatePassageSeekUI() {
+        const seekBar = document.getElementById('passageSeekBar');
+        const currentTimeLabel = document.getElementById('passageCurrentTime');
+        const durationLabel = document.getElementById('passageDuration');
+        if (!seekBar || !currentTimeLabel || !durationLabel) return;
+
+        const audio = currentPassageAudio;
+        const currentTime = audio ? audio.currentTime || 0 : 0;
+        const duration = audio && Number.isFinite(audio.duration) ? audio.duration : 0;
+
+        seekBar.max = String(duration || 0);
+        seekBar.value = String(Math.min(currentTime, duration || currentTime));
+        currentTimeLabel.textContent = formatAudioTime(currentTime);
+        durationLabel.textContent = formatAudioTime(duration);
+    }
+
+    function updateSpellingSeekUI() {
+        const seekBar = document.getElementById('spellingSeekBar');
+        const currentTimeLabel = document.getElementById('spellingCurrentTime');
+        const durationLabel = document.getElementById('spellingDuration');
+        if (!seekBar || !currentTimeLabel || !durationLabel) return;
+
+        const audio = currentSpellingAudio;
+        const currentTime = audio ? audio.currentTime || 0 : 0;
+        const duration = audio && Number.isFinite(audio.duration) ? audio.duration : 0;
+
+        seekBar.max = String(duration || 0);
+        seekBar.value = String(Math.min(currentTime, duration || currentTime));
+        currentTimeLabel.textContent = formatAudioTime(currentTime);
+        durationLabel.textContent = formatAudioTime(duration);
+    }
+
+    function scrubPassageAudio(value) {
+        if (!currentPassageAudio) return;
+        currentPassageAudio.currentTime = Math.max(0, Number(value) || 0);
+        updatePassageSeekUI();
+    }
+
+    function scrubSpellingAudio(value) {
+        if (!currentSpellingAudio) return;
+        currentSpellingAudio.currentTime = Math.max(0, Number(value) || 0);
+        updateSpellingSeekUI();
+    }
+
     function getPassageTrack(passage, trackIndex = 0) {
         if (!passage) return null;
         if (Array.isArray(passage.audioTracks) && passage.audioTracks[trackIndex]) {
@@ -1529,9 +1734,13 @@
             currentPassageAudio = new Audio(resolvePassageAssetPath(passage.audioFolder || 'Audio', track.file));
             currentPassageAudio.datasetPassageId = String(passageId);
             currentPassageAudio.datasetTrackIndex = String(trackIndex);
+            currentPassageAudio.ontimeupdate = updatePassageSeekUI;
+            currentPassageAudio.onloadedmetadata = updatePassageSeekUI;
+            currentPassageAudio.ondurationchange = updatePassageSeekUI;
             currentPassageAudio.onended = () => {
                 isPlaying = false;
                 refreshPassageCards();
+                updatePassageSeekUI();
                 if (currentUser && currentUser.role === 'student') {
                     Progress.recordPracticeCompletion(currentUser.id, 'passage', `${passage.title} - ${track.label}`, passage.level);
                     updatePracticeSummary();
@@ -1576,6 +1785,7 @@
                         <div class="passage-title-row">
                             <div class="passage-title">${track.label}</div>
                             <div class="passage-audio-controls">
+                                <button class="audio-icon-btn audio-rewind" title="Back 5 seconds" onclick="rewindPassageTrack(${passage.id}, ${index}, 5)">⏪</button>
                                 <button class="audio-icon-btn audio-play" title="Play" onclick="playPassageTrack(${passage.id}, ${index}, '${currentPassageSource}')">▶</button>
                                 <button class="audio-icon-btn audio-pause" title="Pause" onclick="pausePassageTrack(${passage.id}, ${index})">⏸</button>
                             </div>
@@ -1585,6 +1795,31 @@
                 `).join('')}
             </div>
         </div>`;
+    }
+
+    function seekCurrentAudio(audio, seconds) {
+        if (!audio) return;
+        const nextTime = Math.max(0, (audio.currentTime || 0) - seconds);
+        try {
+            audio.currentTime = nextTime;
+        } catch (error) {
+            console.warn('Unable to seek audio:', error);
+        }
+    }
+
+    function rewindPassageAudio(seconds = 5) {
+        seekCurrentAudio(currentPassageAudio, seconds);
+        updatePassageSeekUI();
+    }
+
+    function rewindPassageFromCard(passageId, seconds = 5) {
+        if (currentPassageId !== passageId) return;
+        rewindPassageAudio(seconds);
+    }
+
+    function rewindPassageTrack(passageId, trackIndex, seconds = 5) {
+        if (currentPassageId !== passageId || currentPassageTrackIndex !== trackIndex) return;
+        rewindPassageAudio(seconds);
     }
 
     function refreshPassageCards() {
@@ -1658,6 +1893,7 @@
         }
         isPlaying = false;
         refreshPassageCards();
+        updatePassageSeekUI();
     }
 
     function backToPassagesSelection() {
@@ -1713,6 +1949,7 @@
                     <div class="passage-title-row">
                         <div class="passage-title">${lesson.title}</div>
                         <div class="passage-audio-controls">
+                            <button class="audio-icon-btn audio-rewind" title="Back 5 seconds" onclick="event.stopPropagation(); rewindSpellingFromLesson(${lesson.id}, 5)">⏪</button>
                             <button class="audio-icon-btn audio-play" title="Play" onclick="event.stopPropagation(); showSpellingReading(${lesson.id}); playSpellingLesson()">▶</button>
                             <button class="audio-icon-btn audio-pause" title="Pause" onclick="event.stopPropagation(); pauseSpellingLesson()">⏸</button>
                         </div>
@@ -1761,12 +1998,16 @@
             }
             currentSpellingAudio = new Audio(resolvePassageAssetPath(lesson.audioFolder || 'Audio', lesson.audio));
             currentSpellingAudio.datasetLessonId = String(lesson.id);
+            currentSpellingAudio.ontimeupdate = updateSpellingSeekUI;
+            currentSpellingAudio.onloadedmetadata = updateSpellingSeekUI;
+            currentSpellingAudio.ondurationchange = updateSpellingSeekUI;
             currentSpellingAudio.onended = () => {
                 if (currentUser && currentUser.role === 'student') {
                     Progress.recordPracticeCompletion(currentUser.id, 'spelling', lesson.title, lesson.level);
                     updatePracticeSummary();
                 }
                 currentSpellingAudio = null;
+                updateSpellingSeekUI();
             };
         }
 
@@ -1777,6 +2018,17 @@
         }
 
         currentSpellingAudio.play().catch(err => console.error('Error playing spelling audio:', err));
+        updateSpellingSeekUI();
+    }
+
+    function rewindSpellingAudio(seconds = 5) {
+        seekCurrentAudio(currentSpellingAudio, seconds);
+        updateSpellingSeekUI();
+    }
+
+    function rewindSpellingFromLesson(lessonId, seconds = 5) {
+        if (!currentSpellingLesson || currentSpellingLesson.id !== lessonId) return;
+        rewindSpellingAudio(seconds);
     }
 
     function pauseSpellingLesson() {
@@ -1788,6 +2040,7 @@
         if (!currentSpellingAudio) return;
         currentSpellingAudio.pause();
         currentSpellingAudio.currentTime = 0;
+        updateSpellingSeekUI();
     }
 
     function backToSpellingSelection() {
