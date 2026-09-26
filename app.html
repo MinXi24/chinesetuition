@@ -1880,6 +1880,56 @@
 
     ];
 
+    const additionalPassageAssets = [
+        [64, "P4", "P4A普华 第一课", ["P4A普华 （第一课） 《一起看电视》Pg5", "P4A普华 （第一课） 《一起看电视》Pg7,8"]],
+        [65, "P4", "P4A普华 第二课", ["P4A普华 （第二课） 《我们是兄弟姐妹》Pg16", "P4A普华 （第二课） 《一件外套》Pg18,19"]],
+        [66, "P4", "P4A普华 第三课", ["P4A普华 （第三课） 《妈妈，对不起》Pg28", "P4A普华 （第三课） 《一碗云吞面》Pg30,31"]],
+        [67, "P4", "P4A普华 第四课", ["P4A普华 （第四课） 《今天我值日》Pg41", "P4A普华 （第四课） 《今天我值日》Pg43,44"]],
+        [68, "P4", "P4A普华 第五课", ["P4A普华 （第五课） 《我不怕打针》Pg52", "P4A普华 （第五课） 《我的日记》Pg54,55"]],
+        [69, "P4", "P4A普华 第六课", ["P4A普华 （第六课） 《我要参加什么活动呢》Pg66", "P4A普华 （第六课） 《给表妹的一封信》Pg68,69"]],
+        [70, "P4", "P4A普华 第七课", ["P4A普华 （第七课） 《他的脸红了》Pg79", "P4A普华 （第七课） 《看企鹅》Pg81,82"]],
+        [71, "P4", "P4A普华 第八课", ["P4A普华 （第八课） 《马路如虎口》Pg91", "P4A普华 （第八课） 《孕妇出车祸，父子齐帮忙》Pg93,94"]],
+        [72, "P4", "P4A普华 第九课", ["P4A普华 （第九课） 《爱心无障碍》Pg105", "P4A普华 （第九课） 《不一样的快餐店》Pg107,108"]],
+        [73, "P5", "P5A普华 第一课", ["P5A普华 （第一课） 《到户外去》Pg2,3", "P5A普华 （第一课） 《露营记》Pg4,5"]],
+        [74, "P5", "P5A普华 第二课", ["P5A普华 （第二课） 《身体会说话》Pg14,15", "P5A普华 （第二课） 《给小主人的一封信》Pg16,17"]],
+        [75, "P5", "P5A普华 第三课", ["P5A普华 （第三课） 《懂事的你》Pg26,27", "P5A普华 （第三课） 《可贵的沉默》Pg28,29,30"]],
+        [76, "P5", "P5A普华 第四课", ["P5A普华 （第四课） 《分享是快乐的》Pg42,43", "P5A普华 （第四课） 《石头汤》Pg44,45,46"]],
+        [77, "P5", "P5A普华 第五课", ["P5A普华 （第五课） 《我的东西找到了》Pg56,57", "P5A普华 （第五课） 《一件让我难忘的事》Pg58,59"]],
+        [78, "P5", "P5A普华 第六课", ["P5A普华 （第六课） 《一千桶水》Pg70,71", "P5A普华 （第六课） 《一千桶水》Pg72,73,74"]],
+        [79, "P5", "P5A普华 第七课", ["P5A普华 （第七课） 《和时间赛跑》Pg84,85", "P5A普华 （第七课） 《和时间赛跑》Pg86,87,88"]],
+        [80, "P5", "P5A普华 第八课", ["P5A普华 （第八课） 《很久很久以前》Pg98,99", "P5A普华 （第八课） 《很久很久以前》Pg100,101,102,103,104"]]
+    ];
+
+    const passageNotes = {
+        65: "Pg18,19：注意⚠️“天空”音频读成“每天空”",
+        70: "Pg81,82：注意⚠️多音字“着急”的“着”zháo"
+    };
+
+    passages.push(...additionalPassageAssets.map(([id, level, title, audioLabels]) => {
+        const images = audioLabels.flatMap(label => {
+            const match = label.match(/^(.*)Pg([0-9,]+)$/);
+            if (!match) return [];
+            return match[2].split(',').map(page => ({
+                page: Number(page),
+                file: `${match[1]}Pg${page}.jpeg`
+            }));
+        });
+        const pages = images.map(image => image.page);
+        return {
+            id,
+            level,
+            title,
+            preview: `${title} Pg${pages.join(',')}`,
+            text: passageNotes[id] ? `Pg${pages.join(',')}.\n${passageNotes[id]}` : `Pg${pages.join(',')}.`,
+            pages: pages.join(','),
+            imageFolder: "Image",
+            audioFolder: "Audio",
+            images,
+            audioTracks: audioLabels.map(label => ({ label, file: `${label}.mpeg` })),
+            date: "2026-09-26"
+        };
+    }));
+
     const spellingLessons = [
         {
             id: 1,
@@ -2456,9 +2506,25 @@
     // =====================================================
     // Passages
     // =====================================================
+    const lessonOrder = {
+        "第一课": 1, "第二课": 2, "第三课": 3, "第四课": 4, "第五课": 5,
+        "第六课": 6, "第七课": 7, "第八课": 8, "第九课": 9, "第十课": 10,
+        "第十一课": 11, "第十二课": 12, "第十三课": 13, "第十四课": 14,
+        "第十五课": 15, "第十六课": 16, "第十七课": 17
+    };
+
+    function getPassageLessonOrder(passage) {
+        const lesson = Object.keys(lessonOrder).find(label => passage.title.includes(label));
+        return lesson ? lessonOrder[lesson] : Number.MAX_SAFE_INTEGER;
+    }
+
+    function sortPassagesByLesson(passagesForLevel) {
+        return [...passagesForLevel].sort((a, b) => getPassageLessonOrder(a) - getPassageLessonOrder(b));
+    }
+
     function getAccessiblePassages() {
-        if (!currentUser || currentUser.role !== 'student') return passages;
-        return passages.filter(p => p.level === currentUser.level);
+        if (!currentUser || currentUser.role !== 'student') return sortPassagesByLesson(passages);
+        return sortPassagesByLesson(passages.filter(p => p.level === currentUser.level));
     }
 
     function displayPassagesSelection() {
@@ -2495,7 +2561,7 @@
 
     function renderTeacherPassages() {
         const selectedLevel = document.getElementById('teacherPassageLevelSelect').value;
-        const levelPassages = passages.filter(p => p.level === selectedLevel);
+        const levelPassages = sortPassagesByLesson(passages.filter(p => p.level === selectedLevel));
         const content = document.getElementById('teacherPassagesContent');
 
         if (levelPassages.length === 0) {
