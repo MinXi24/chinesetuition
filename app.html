@@ -171,6 +171,7 @@
         .audio-rewind { background: linear-gradient(135deg, var(--accent-yellow) 0%, #FFE08C 100%); color: #7A5A00; }
         .passage-empty { background: rgba(255,255,255,0.82); border: 1px dashed rgba(255,127,174,0.28); border-radius: 24px; padding: 28px; text-align: center; color: var(--text-light); box-shadow: 0 10px 20px rgba(233,120,164,0.06); }
         .passage-empty strong { display: block; color: var(--text-dark); font-size: 1.05rem; margin-bottom: 8px; }
+        .video-player { display: block; width: 100%; max-height: 68vh; border-radius: 20px; background: #241f2b; }
 
         .reading-view { max-width: 900px; }
         .reading-shell { background: rgba(255,255,255,0.82); border: 1px solid rgba(255,255,255,0.6); border-radius: 30px; padding: 22px; box-shadow: 0 16px 32px rgba(233,120,164,0.10); backdrop-filter: blur(10px); }
@@ -383,6 +384,7 @@
                     <div class="form-group">
                         <label>Level</label>
                         <select id="newStudentLevel">
+                            <option value="N2">N2</option>
                             <option value="P1">P1</option><option value="P2">P2</option><option value="P3">P3</option>
                             <option value="P4">P4</option><option value="P5" selected>P5</option><option value="P6">P6</option>
                         </select>
@@ -405,6 +407,7 @@
                 <div class="teacher-passages-toolbar">
                     <label for="teacherPassageLevelSelect" style="font-weight:600; color: var(--text-dark);">Level</label>
                     <select id="teacherPassageLevelSelect" onchange="renderTeacherPassages()">
+                        <option value="N2">N2</option>
                         <option value="P1">P1</option>
                         <option value="P2">P2</option>
                         <option value="P3">P3</option>
@@ -434,6 +437,7 @@
                         <h1 class="reading-title" id="currentPassageTitle">Passage Title</h1>
                         <div class="reading-subtitle" id="currentPassageMeta"></div>
                     </div>
+
                     <div class="reading-controls">
                         <button class="btn" onclick="playFullPassage()">🔊 Play</button>
                         <button class="btn" onclick="pausePassage()">⏸️ Pause</button>
@@ -543,6 +547,7 @@
         <div class="form-group">
             <label>Level</label>
             <select id="editStudentLevel">
+                <option value="N2">N2</option>
                 <option value="P1">P1</option><option value="P2">P2</option><option value="P3">P3</option>
                 <option value="P4">P4</option><option value="P5">P5</option><option value="P6">P6</option>
             </select>
@@ -582,6 +587,7 @@
     let currentSpellingLesson = null;
     let currentPassageAudio = null;
     let currentSpellingAudio = null;
+    let currentVideoLesson = null;
     let practiceSummaryMidnightTimer = null;
     let selectedStudentHistoryId = null;
     let selectedEditStudentId = null;
@@ -1982,6 +1988,11 @@
         }
     ];
 
+    const n2VideoLessons = [
+        { id: 1, title: '第一课', file: 'N21.mp4' },
+        { id: 2, title: '第二课', file: 'N22.mp4' }
+    ];
+
     const flashcardData = {
         'P1': [
             { char: '一', meaning: 'One', pinyin: 'yī' },
@@ -2124,6 +2135,7 @@
     function handleLogout() {
         stopPassage();
         stopSpellingLesson();
+        stopVideoLesson();
         
         // Clear all caches before logout
         if (window.Progress && window.Progress.clearCache) {
@@ -2192,6 +2204,7 @@
 
         stopPassage();
         stopSpellingLesson();
+        stopVideoLesson();
 
         document.querySelectorAll('.view-section').forEach(v => v.classList.remove('active'));
         document.getElementById('modulesView').style.display = 'none';
@@ -2539,8 +2552,22 @@
     function displayPassagesSelection() {
         const grid = document.getElementById('passagesGrid');
         const availablePassages = getAccessiblePassages();
+        const n2Lessons = currentUser && currentUser.role === 'student' && currentUser.level === 'N2'
+            ? n2VideoLessons.map(lesson => `
+                <div class="passage-card" onclick="showN2Video(${lesson.id})">
+                    <div class="passage-title-row">
+                        <div class="passage-title">🎬 ${lesson.title}</div>
+                    </div>
+                    <div class="passage-preview">Watch the N2 video for ${lesson.title.toLowerCase()}.</div>
+                    <div class="passage-meta">
+                        <span class="passage-level-pill">N2</span>
+                        <span>Video lesson</span>
+                    </div>
+                </div>
+            `).join('')
+            : '';
 
-        if (availablePassages.length === 0) {
+        if (availablePassages.length === 0 && !n2Lessons) {
             grid.innerHTML = `<div class="passage-empty">
                 <strong>No materials for ${currentUser.level || 'your'} level yet</strong>
                 <div>New passages will appear here once they are assigned to your level.</div>
@@ -2548,7 +2575,7 @@
             return;
         }
 
-        grid.innerHTML = availablePassages.map(p => `
+        grid.innerHTML = n2Lessons + availablePassages.map(p => `
             <div class="passage-card ${currentPassageId === p.id && isPlaying ? 'playing' : ''}" data-passage-id="${p.id}" onclick="showPassageReading(${p.id}, 'student')">
                 <div class="passage-title-row">
                     <div class="passage-title">${p.title}</div>
@@ -2572,8 +2599,22 @@
         const selectedLevel = document.getElementById('teacherPassageLevelSelect').value;
         const levelPassages = sortPassagesByLesson(passages.filter(p => p.level === selectedLevel));
         const content = document.getElementById('teacherPassagesContent');
+        const n2Lessons = selectedLevel === 'N2'
+            ? n2VideoLessons.map(lesson => `
+                <div class="passage-card" onclick="showN2Video(${lesson.id}, 'teacher')">
+                    <div class="passage-title-row">
+                        <div class="passage-title">🎬 ${lesson.title}</div>
+                    </div>
+                    <div class="passage-preview">Watch the N2 video for ${lesson.title.toLowerCase()}.</div>
+                    <div class="passage-meta">
+                        <span class="passage-level-pill">N2</span>
+                        <span>Video lesson</span>
+                    </div>
+                </div>
+            `).join('')
+            : '';
 
-        if (levelPassages.length === 0) {
+        if (levelPassages.length === 0 && !n2Lessons) {
             content.innerHTML = `<div class="passage-empty">
                 <strong>Coming soon</strong>
                 <div>No materials are uploaded yet for ${selectedLevel}.</div>
@@ -2582,6 +2623,7 @@
         }
 
         content.innerHTML = `<div class="passages-grid">
+            ${n2Lessons}
             ${levelPassages.map(p => `
                 <div class="passage-card" data-passage-id="${p.id}" onclick="showPassageReading(${p.id}, 'teacher')">
                     <div class="passage-title-row">
@@ -2608,6 +2650,8 @@
         const passage = passages.find(p => p.id === passageId);
         if (!passage) return;
 
+        document.querySelector('#passagesReadingPage .reading-controls').style.display = '';
+        document.querySelector('#passagesReadingPage .audio-seeker').style.display = '';
         if (currentPassageId !== passageId && isPlaying) stopPassage();
 
         currentPassageId = passageId;
@@ -2875,6 +2919,9 @@
 
     function backToPassagesSelection() {
         stopPassage();
+        stopVideoLesson();
+        document.querySelector('#passagesReadingPage .reading-controls').style.display = '';
+        document.querySelector('#passagesReadingPage .audio-seeker').style.display = '';
         document.getElementById('passagesReadingPage').classList.remove('active');
         if (currentPassageSource === 'teacher') {
             document.getElementById('teacherPassagesPage').classList.add('active');
@@ -2882,6 +2929,39 @@
             document.getElementById('passagesSelectionPage').classList.add('active');
         }
         currentPassageId = null;
+    }
+
+    function showN2Video(lessonId, source = 'student') {
+        if (!currentUser || (currentUser.role !== 'student' && currentUser.role !== 'teacher')) return;
+
+        const lesson = n2VideoLessons.find(item => item.id === lessonId);
+        if (!lesson) return;
+
+        currentPassageSource = source === 'teacher' ? 'teacher' : 'student';
+        stopVideoLesson();
+        currentVideoLesson = lesson;
+        document.getElementById('currentPassageLevel').textContent = 'N2 Video Lesson';
+        document.getElementById('currentPassageTitle').textContent = lesson.title;
+        document.getElementById('currentPassageMeta').textContent = 'Watch this lesson video';
+        document.getElementById('passageAudioArea').innerHTML = '';
+        document.getElementById('passageImagesArea').innerHTML =
+            `<video id="lessonVideo" class="video-player" controls preload="metadata" src="Video/${lesson.file}"></video>`;
+        document.getElementById('readingTextArea').textContent = '';
+        document.querySelector('#passagesReadingPage .reading-controls').style.display = 'none';
+        document.querySelector('#passagesReadingPage .audio-seeker').style.display = 'none';
+        document.getElementById('passagesSelectionPage').classList.remove('active');
+        document.getElementById('teacherPassagesPage').classList.remove('active');
+        document.getElementById('passagesReadingPage').classList.add('active');
+    }
+
+    function stopVideoLesson() {
+        const video = document.getElementById('lessonVideo');
+        if (video) {
+            video.pause();
+            video.removeAttribute('src');
+            video.load();
+        }
+        currentVideoLesson = null;
     }
 
     // =====================================================
