@@ -351,8 +351,10 @@
             <div class="section-card" style="margin-bottom:20px;">
                 <div class="teacher-students-toolbar">
                     <input type="text" id="teacherStudentSearch" placeholder="Search student name" oninput="updateTeacherStudentsList()">
+                    <button class="btn btn-small" onclick="promoteAllStudents()">⬆️ Promote All Students</button>
                     <span style="color: var(--text-light); margin-left:10px;"></span>
                 </div>
+                <p style="color: var(--text-light); margin: 12px 0 0;">Moves each student up one level. P6 students remain at P6.</p>
             </div>
             <div class="section-card" style="margin-bottom:20px;">
                 <div class="table-container">
@@ -2413,6 +2415,30 @@
             document.getElementById('newStudentUsername').value = '';
             document.getElementById('newStudentPassword').value = '';
             updateTeacherStudentsList();
+        } else {
+            showMsg('createMessage', '❌ ' + result.error, 'error');
+        }
+    }
+
+    async function promoteAllStudents() {
+        const students = Auth.getStudents();
+        const promotableLevels = ['N2', 'P1', 'P2', 'P3', 'P4', 'P5'];
+        const promotableCount = students.filter(student => promotableLevels.includes(student.level)).length;
+        if (!promotableCount) {
+            showMsg('createMessage', 'All students are already at P6.', 'success');
+            return;
+        }
+
+        const confirmed = confirm(
+            `Promote ${promotableCount} student${promotableCount === 1 ? '' : 's'} by one level? ` +
+            'Students at P6 will remain at P6.'
+        );
+        if (!confirmed) return;
+
+        const result = await Auth.promoteStudents();
+        if (result.success) {
+            await updateTeacherStudentsList();
+            showMsg('createMessage', `✅ Promoted ${result.updatedCount} student${result.updatedCount === 1 ? '' : 's'}.`, 'success');
         } else {
             showMsg('createMessage', '❌ ' + result.error, 'error');
         }

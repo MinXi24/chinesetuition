@@ -46,7 +46,8 @@ A complete web-based Chinese tutoring platform with:
    2. See all students, their scores, and progress
    3. Click "👁️ View" to see detailed student progress
    4. "💸 Deduct Points" to redeem points for students
-   5. "📋 Assign Levels" to set student access levels
+   5. Use "⬆️ Promote All Students" to move every student up one level for the new school year (P6 stays P6)
+   6. "📋 Assign Levels" to set individual student access levels
 
 ---
 
@@ -106,7 +107,7 @@ localStorage.clear()
 ### Teacher Flow
 1. **Login** → See all students
 2. **Monitor** → View progress, scores, time spent
-3. **Manage** → Assign levels, deduct points
+3. **Manage** → Promote students for the new school year, assign levels, and deduct points
 4. **Redeem** → Click "💸 Deduct" to claim points for students
 
 ### Admin Flow

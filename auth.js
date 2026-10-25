@@ -319,6 +319,41 @@
             }
         },
 
+        /**
+         * Promote every student by one level. Students already at P6 remain at P6.
+         * Returns { success, updatedCount } or { success: false, error }.
+         */
+        async promoteStudents() {
+            try {
+                await waitForFirebase();
+                const students = await Auth.refreshStudents();
+                const levelOrder = ['N2', 'P1', 'P2', 'P3', 'P4', 'P5', 'P6'];
+                const studentsToPromote = students.filter(student => {
+                    const levelIndex = levelOrder.indexOf(student.level);
+                    return levelIndex >= 0 && levelIndex < levelOrder.length - 1;
+                });
+
+                await Promise.all(studentsToPromote.map(student => {
+                    const nextLevel = levelOrder[levelOrder.indexOf(student.level) + 1];
+                    return fsSetDoc(fsDoc('users', student.id), {
+                        level: nextLevel,
+                        updatedAt: nowISO()
+                    }, { merge: true });
+                }));
+
+                Auth._cachedStudents = students.map(student => {
+                    const levelIndex = levelOrder.indexOf(student.level);
+                    return levelIndex >= 0 && levelIndex < levelOrder.length - 1
+                        ? { ...student, level: levelOrder[levelIndex + 1] }
+                        : student;
+                });
+                return { success: true, updatedCount: studentsToPromote.length };
+            } catch (err) {
+                console.error('promoteStudents error', err);
+                return { success: false, error: 'Could not promote students. Check connection.' };
+            }
+        },
+
         _cachedStudents: []
     };
 
